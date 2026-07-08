@@ -1,0 +1,117 @@
+<!doctype html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 16px; color: #1f1f1f; }
+    h1 { font-size: 18px; margin: 0 0 4px; }
+    .muted { color: #666; font-size: 12px; }
+    .card { border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin: 12px 0; background: #fafafa; }
+    button { width: 100%; margin: 5px 0; padding: 10px; border: 0; border-radius: 8px; cursor: pointer; font-weight: 700; }
+    button.primary { background: #4b2464; color: #fff; }
+    button.secondary { background: #ede7f6; color: #2d1739; }
+    button.warning { background: #fff3cd; color: #6b4e00; }
+    button.danger { background: #f8d7da; color: #842029; }
+    pre { white-space: pre-wrap; background: #111; color: #eee; padding: 10px; border-radius: 8px; max-height: 240px; overflow: auto; }
+    .ok { color: #107c10; font-weight: 700; }
+    .bad { color: #a80000; font-weight: 700; }
+    a.btn { display:block; text-align:center; text-decoration:none; margin:5px 0; padding:10px; border-radius:8px; font-weight:700; background:#ede7f6; color:#2d1739; }
+
+  </style>
+</head>
+<body>
+  <h1>🎉 Félibrée Admin</h1>
+  <div class="muted" id="state">Chargement…</div>
+
+  <div class="card">
+    <button class="primary" onclick="run('refresh-cockpit')">🔄 Actualiser cockpit</button>
+    <button class="primary" onclick="run('quality-checks')">🔎 Contrôles qualité</button>
+    <button class="secondary" onclick="run('press-due')">📰 Relances presse dues</button>
+  </div>
+
+  <div class="card">
+    <button class="secondary" onclick="run('calendar-dedicated-dry-run')">📆 Calendrier dédié — dry-run</button>
+    <button class="warning" onclick="confirmRun('calendar-dedicated-apply', 'Création réelle du calendrier dédié. Continuer uniquement si FELIBREE_ALLOW_CALENDAR_CREATE=TRUE est configuré dans les propriétés du script.')">📆 Créer calendrier dédié — APPLY protégé</button>
+    <button class="secondary" onclick="run('calendar-share-dry-run')">👥 Partage calendrier — dry-run</button>
+    <button class="warning" onclick="confirmRun('calendar-share-apply', 'Partage réel du calendrier avec les collaborateurs listés. Continuer uniquement si FELIBREE_ALLOW_CALENDAR_SHARE=TRUE est configuré dans les propriétés du script.')">👥 Partage calendrier — APPLY protégé</button>
+    <button class="secondary" onclick="run('calendar-dry-run')">📆 Publications vers calendrier — dry-run</button>
+    <button class="warning" onclick="confirmRun('calendar-apply', 'Écriture réelle des événements dans le calendrier dédié. Continuer uniquement si FELIBREE_ALLOW_CALENDAR_WRITE=TRUE est configuré dans les propriétés du script.')">📆 Publications vers calendrier — APPLY protégé</button>
+  </div>
+
+
+  <div class="card">
+    <div class="muted">Liens admin</div>
+    <a class="btn" id="adminWebLink" href="#" target="_blank">🖥️ Ouvrir Admin Web</a>
+    <a class="btn" id="calendarEmbedLink" href="#" target="_blank">📆 Ouvrir calendrier intégré</a>
+    <a class="btn" id="calendarSettingsLink" href="#" target="_blank">⚙️ Paramètres Google Calendar</a>
+    <button class="secondary" onclick="run('open-admin-web')">🖥️ Afficher panneau Admin Web</button>
+  </div>
+
+
+  <div class="card">
+    <div class="muted">Sauvegarde live / CLASP / GitHub</div>
+    <button class="secondary" onclick="run('source-backup-dry-run')">💾 Source backup Drive — dry-run</button>
+    <button class="warning" onclick="confirmRun('source-backup-apply', 'Créer un ZIP de sauvegarde live dans Drive ?')">💾 Source backup Drive — APPLY</button>
+    <button class="secondary" onclick="run('full-backup-dry-run')">💾 Backup complet Drive + CLASP + GitHub — dry-run</button>
+    <button class="danger" onclick="confirmRun('full-backup-apply', 'Créer le backup Drive puis pousser le miroir CLASP-compatible vers GitHub ? Vérifier FELIBREE_ALLOW_SOURCE_BACKUP_WRITE=TRUE, FELIBREE_ALLOW_GITHUB_WRITE=TRUE et FELIBREE_GITHUB_TOKEN.')">💾 Backup complet Drive + CLASP + GitHub — APPLY</button>
+    <button class="secondary" onclick="run('github-sync-dry-run')">🐙 GitHub sync depuis source live — dry-run</button>
+    <button class="danger" onclick="confirmRun('github-sync-apply', 'Pousser le miroir CLASP-compatible vers GitHub depuis la source live ?')">🐙 GitHub sync depuis source live — APPLY</button>
+  </div>
+
+  <div class="card">
+    <button class="secondary" onclick="confirmRun('install-triggers', 'Installer les triggers automatiques quotidiens et hebdomadaires ?')">⏱️ Installer triggers</button>
+    <button class="danger" onclick="confirmRun('remove-triggers', 'Supprimer les triggers Félibrée existants ?')">🛑 Supprimer triggers</button>
+    <button class="secondary" onclick="run('install')">⚙️ Initialiser / réparer onglets techniques</button>
+  </div>
+
+  <div class="card">
+    <div class="muted">Résultat</div>
+    <pre id="output">Aucune action lancée.</pre>
+  </div>
+
+<script>
+  function loadState() {
+    google.script.run.withSuccessHandler(function (s) {
+      document.getElementById('state').innerHTML =
+        'Version: ' + s.version + '<br>' +
+        'Utilisateur: ' + s.user + '<br>' +
+        'Calendar ID: ' + s.calendarId + '<br>' +
+        'Création calendrier: ' + (s.calendarCreateEnabled ? '<span class="ok">ON</span>' : '<span class="bad">OFF</span>') + '<br>' +
+        'Partage calendrier: ' + (s.calendarShareEnabled ? '<span class="ok">ON</span>' : '<span class="bad">OFF</span>') + '<br>' +
+        'Écriture événements: ' + (s.calendarWriteEnabled ? '<span class="ok">ON</span>' : '<span class="bad">OFF / dry-run</span>') + '<br>' +
+        'Admin web: ' + (s.adminWebUrl ? '<span class="ok">URL configurée</span>' : '<span class="bad">à déployer</span>') + '<br>' +
+        'Planning write: ' + (s.planningWriteEnabled ? '<span class="ok">ON</span>' : '<span class="bad">OFF / apply bloqué</span>') + '<br>' +
+        'Source backup: ' + (s.sourceBackupEnabled ? '<span class="ok">ON</span>' : '<span class="bad">OFF / apply bloqué</span>') + '<br>' +
+        'GitHub write: ' + (s.githubWriteEnabled ? '<span class="ok">ON</span>' : '<span class="bad">OFF / apply bloqué</span>') + '<br>' +
+        'GitHub repo: ' + s.githubOwner + '/' + s.githubRepo + ' [' + s.githubBranch + '] / ' + s.githubPathPrefix;
+
+      document.getElementById('adminWebLink').href = s.adminWebUrl || s.spreadsheetUrl;
+      document.getElementById('calendarEmbedLink').href = s.calendarEmbedUrl;
+      document.getElementById('calendarSettingsLink').href = s.calendarSettingsUrl;
+
+    }).withFailureHandler(showError).FELIBREE_getUiState();
+  }
+
+  function run(action) {
+    document.getElementById('output').textContent = 'Action en cours: ' + action + '…';
+    google.script.run
+      .withSuccessHandler(function (res) {
+        document.getElementById('output').textContent = JSON.stringify(res, null, 2);
+        loadState();
+      })
+      .withFailureHandler(showError)
+      .FELIBREE_sidebarAction(action);
+  }
+
+  function confirmRun(action, message) {
+    if (confirm(message)) run(action);
+  }
+
+  function showError(err) {
+    document.getElementById('output').textContent = 'ERREUR: ' + (err && err.message ? err.message : err);
+  }
+
+  loadState();
+</script>
+</body>
+</html>

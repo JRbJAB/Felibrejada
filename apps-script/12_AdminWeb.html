@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; color: #1f1f1f; background:#f7f4fa; }
+    header { background:#2e173d; color:#fff; padding:16px 22px; }
+    h1 { margin:0; font-size:22px; }
+    .muted { color:#ddd; font-size:12px; margin-top:4px; }
+    main { padding:18px; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; margin-bottom:14px; }
+    .card { background:#fff; border:1px solid #e2dcea; border-radius:12px; padding:14px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+    .card b { display:block; margin-bottom:6px; }
+    a.button { display:inline-block; margin:4px 6px 4px 0; padding:9px 12px; border-radius:8px; background:#4b2464; color:#fff; text-decoration:none; font-weight:700; }
+    a.secondary { background:#ede7f6; color:#2d1739; }
+    iframe { width:100%; height:720px; border:0; border-radius:12px; background:#fff; }
+    .warning { background:#fff3cd; border:1px solid #f0d36b; padding:10px; border-radius:10px; color:#5f4700; }
+    @media (max-width:900px) { .grid { grid-template-columns:1fr; } iframe { height:640px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🖥️ Admin Web — Félibrée 2027</h1>
+    <div class="muted" id="subtitle">Chargement…</div>
+  </header>
+  <main>
+    <div class="warning">
+      Admin privé uniquement : cet écran contient le calendrier de pilotage communication, des brouillons, relances presse et éléments internes.
+    </div>
+    <div class="grid">
+      <div class="card"><b>🎛️ Cockpit</b><a class="button" id="sheetLink" target="_blank">Ouvrir le Sheet</a></div>
+      <div class="card"><b>📆 Calendrier</b><a class="button" id="calendarLink" target="_blank">Ouvrir plein écran</a><a class="button secondary" id="settingsLink" target="_blank">Paramètres</a></div>
+      <div class="card"><b>🔒 Sécurité</b><div id="security">Dry-run par défaut.</div></div>
+    </div>
+    <div class="card">
+      <b>📆 Communication (🎉 Félibrée 2027)</b>
+      <iframe id="calFrame" src="about:blank"></iframe>
+    </div>
+  </main>
+<script>
+  const state = <?!= stateJson ?>;
+  document.getElementById('subtitle').textContent = 'Version ' + state.version + ' — ' + state.user;
+  document.getElementById('sheetLink').href = state.spreadsheetUrl;
+  document.getElementById('calendarLink').href = state.calendarEmbedUrl;
+  document.getElementById('settingsLink').href = state.calendarSettingsUrl;
+  document.getElementById('calFrame').src = state.calendarEmbedUrl;
+  document.getElementById('security').innerHTML =
+    'Calendar ID: ' + state.calendarId + '<br>' +
+    'Partage: ' + (state.calendarShareEnabled ? 'ON' : 'OFF') + '<br>' +
+    'Écriture événements: ' + (state.calendarWriteEnabled ? 'ON' : 'OFF / dry-run');
+</script>
+</body>
+</html>

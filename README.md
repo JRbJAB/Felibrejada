@@ -1,10 +1,1 @@
-# Felibrejada
-
-Initialisation automatique du dépôt vide pour le miroir Apps Script / CLASP / GitHub.
-
-- Repo : JRbJAB/Felibrejada
-- Branche cible : main
-- Dossier CLASP : apps-script
-- Créé par Apps Script avant le commit complet.
-
-Ce fichier peut être remplacé par le commit de miroir complet.
+# Felibrejada\n\nMiroir Apps Script live pour la Felibrejada dins Brantome en Perigor.\n\n- Trace backup : `70eb238d`\n- Version script : `felibree-strict-ui-automation-v0.6.1-github-empty-repo-fix-20260708`\n- Script ID : `1MGsOVwD11HjZYe9lW9WnjccfOrsK5SSwLS6OVPP9dtIWotIv-K_RfxR9`\n- Source Drive : https://drive.google.com/file/d/1R10ghtGfCJ3iXtOJHaFkeYlFf-u-Hs9Y/view?usp=drivesdk\n- Dossier CLASP : `apps-script`\n\nLe dépôt est alimenté par le menu Apps Script :\n\n`💾 Backup complet Drive + CLASP + GitHub — APPLY protégé`
