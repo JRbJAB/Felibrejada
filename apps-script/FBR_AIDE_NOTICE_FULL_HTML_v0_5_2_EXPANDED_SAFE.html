@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<base target="_top">
+<style>
+:root{--bg:#f6f8fb;--card:#fff;--ink:#172033;--muted:#617087;--blue:#1b4e7a;--green:#176b3a;--gold:#e5b449;--red:#a73636;--line:#dde5ef}
+*{box-sizing:border-box}
+body{font-family:Arial,Helvetica,sans-serif;margin:0;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.45}
+header{position:sticky;top:0;background:linear-gradient(135deg,#12385f,#1b6b7a);color:#fff;padding:14px 16px;z-index:5;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+header h1{margin:0;font-size:20px} header p{margin:4px 0 0;color:#dfefff}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+input,select{border:1px solid #bfd0e3;border-radius:8px;padding:9px;background:#fff;min-width:170px}
+button{border:0;border-radius:8px;padding:9px 11px;background:#eaf1f8;color:#12385f;font-weight:700;cursor:pointer}
+button.active{background:#ffd966;color:#3c2a00}
+.wrap{padding:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin:0 0 12px;box-shadow:0 1px 4px rgba(10,30,60,.06)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.kpi{border-left:5px solid var(--blue)}
+.badge{display:inline-block;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:700;margin:2px;background:#e8eef6;color:#1c3c5a}
+.badge.p0{background:#ffe3e3;color:#861e1e} .badge.p1{background:#fff1c2;color:#6a4a00} .badge.p2{background:#e6f1ff;color:#1b4e7a}
+.badge.ok{background:#e2f3df;color:#1b5b2e} .badge.warn{background:#fff1c2;color:#7d5600}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+.section-title{font-size:18px;margin:18px 0 8px;color:#12385f}
+.tab-card h3{margin:0 0 6px;font-size:17px}
+.meta{color:var(--muted);font-size:12px;margin:4px 0}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.cols div{background:#f3f6fa;border:1px solid #e1e8f2;border-radius:8px;padding:7px}
+.mini{border:1px solid #c9d8e8;border-radius:8px;margin:10px 0;background:#fff;overflow:hidden}
+.mini .bar{background:#1b4e7a;color:white;padding:6px 8px;font-weight:700;font-size:12px}
+.mini .sheet{padding:8px;background:linear-gradient(#fff,#f7fbff)}
+.mini table{border-collapse:collapse;width:100%;font-size:10px;color:#40506a}
+.mini td{border:1px solid #d9e3ee;height:16px;padding:2px}
+.mini tr:first-child td{background:#dceaf7;font-weight:700}
+.timeline{counter-reset:step}
+.step{display:flex;gap:10px;margin:8px 0}
+.step:before{counter-increment:step;content:counter(step);background:#1b4e7a;color:white;border-radius:50%;min-width:24px;height:24px;text-align:center;line-height:24px;font-weight:700}
+.hide{display:none!important}
+.footer{color:#65758c;font-size:11px;padding:20px 0}
+.rule{border-left:4px solid #e5b449}
+.danger{border-left:4px solid #a73636}
+.okcard{border-left:4px solid #176b3a}
+code{background:#eef3f8;padding:1px 4px;border-radius:4px}
+</style>
+</head>
+<body>
+<header>
+<h1>📘 Aide Notice complète</h1>
+<p>Felibrejada dins Brantome en Perigor — aide embarquée static-first, 47 onglets documentés.</p>
+<div class="toolbar">
+<input id="search" placeholder="Rechercher onglet, rôle, owner, risque..." oninput="render()">
+<select id="domain" onchange="render()"><option value="">Tous domaines</option></select>
+<button id="viewTabs" class="active" onclick="setView('tabs')">Onglets</button>
+<button id="viewProcesses" onclick="setView('processes')">Parcours</button>
+<button id="viewRules" onclick="setView('rules')">Règles</button>
+<button id="viewFaq" onclick="setView('faq')">FAQ</button>
+</div>
+</header>
+<div class="wrap">
+<div class="card okcard"><b>Mode sécurisé :</b> aucune écriture, aucun appel externe, aucun Gemini actif. Cette aide ne fait qu’afficher la documentation et guider l’utilisateur.</div>
+<div id="content"></div>
+<div class="footer">Version v0.5.1-full-html-safe — source : backup live ddfb2995 + Sheet Registry. Si l’aide semble obsolète : relire le dernier backup live avant patch.</div>
+</div>
+<script>
+const TABS = [
+  {
+    "name": "🎛️ Cockpit",
+    "domain": "Pilotage",
+    "role": "Vue synthèse des alertes, KPI, readiness et priorités.",
+    "owner": "JRbIA",
+    "criticality": "P0",
+    "update": "Hebdo + après chaque arbitrage",
+    "writes": "Oui",
+    "source": "Actions, Décisions, Readiness, Logs",
+    "risk": "Piloter sur une synthèse obsolète.",
+    "next": "Vérifier les alertes, puis ouvrir les onglets sources."
+  },
+  {
+    "name": "📌 Réunion 11/07",
+    "domain": "Réunion / PV",
+    "role": "PV opérationnel fusionné : capter les échanges, décisions, budgets, actions et propagation.",
+    "owner": "Bureau / Communication",
+    "criticality": "P0",
+    "update": "Pendant réunion puis clôture",
+    "writes": "Oui",
+    "source": "Réunion live",
+    "risk": "Décision non tracée ou non propagée.",
+    "next": "Remplir pendant la réunion, puis reporter dans Décisions et Actions."
+  },
+  {
+    "name": "🗳️ Décisions",
+    "domain": "Gouvernance",
+    "role": "Registre d’arbitrage : décision, statut, responsable, budget et propagation.",
+    "owner": "Bureau",
+    "criticality": "P0",
+    "update": "À chaque arbitrage",
+    "writes": "Oui",
+    "source": "PV / réunion",
+    "risk": "Exécuter une action sans décision validée.",
+    "next": "Mettre en Validé uniquement après accord explicite."
+  },
+  {
+    "name": "⚡ Actions",
+    "domain": "Exécution",
+    "role": "Backlog opérationnel : tâche, owner, priorité, échéance, statut et budget.",
+    "owner": "JRbIA / responsables",
+    "criticality": "P0",
+    "update": "Quotidien en sprint",
+    "writes": "Oui",
+    "source": "Décisions / Sprint",
+    "risk": "Action sans owner ni date.",
+    "next": "Chaque décision validée doit devenir une action suivie."
+  },
+  {
+    "name": "✅ Readiness 11/07",
+    "domain": "Préparation",
+    "role": "Checklist de préparation réunion avec 14 checkpoints RDY et statuts P0/P1.",
+    "owner": "Bureau / Communication",
+    "criticality": "P0",
+    "update": "Avant réunion",
+    "writes": "Oui",
+    "source": "Décisions, accès, site, réseaux",
+    "risk": "Lancer sans prérequis validés.",
+    "next": "Utiliser Cockpit A37:M54 pour la vue fusionnée."
+  },
+  {
+    "name": "🚀 Sprint 72h",
+    "domain": "Exécution post-réunion",
+    "role": "Plan J0 à J+3 après arbitrages : domaine, réseaux, site, soutien, presse, posts, accès.",
+    "owner": "Bureau / Communication",
+    "criticality": "P0",
+    "update": "Post-réunion",
+    "writes": "Oui",
+    "source": "Décisions validées",
+    "risk": "Exécuter sans accès sécurisés.",
+    "next": "Fusionné dans Actions ; consulter comme source/archive."
+  },
+  {
+    "name": "📝 PV 11/07",
+    "domain": "PV historique",
+    "role": "Ancien PV structuré avant fusion dans Réunion 11/07.",
+    "owner": "Bureau",
+    "criticality": "P0",
+    "update": "Historique",
+    "writes": "Non",
+    "source": "Réunion",
+    "risk": "Double saisie si utilisé à la place de l’onglet fusionné.",
+    "next": "Utiliser 📌 Réunion 11/07."
+  },
+  {
+    "name": "🧭 Priorités Com",
+    "domain": "Pilotage communication",
+    "role": "Ancienne vue priorités P0/P1/P2 ; source masquée après fusion.",
+    "owner": "Communication",
+    "criticality": "P0",
+    "update": "Historique",
+    "writes": "Non",
+    "source": "Réunion",
+    "risk": "Priorités divergentes si éditée séparément.",
+    "next": "Utiliser Cockpit / Actions / Décisions."
+  },
+  {
+    "name": "🎨 Logo Charte",
+    "domain": "Identité",
+    "role": "Critères logo/charte, familles, couleurs, symbole, déclinaisons et livrables.",
+    "owner": "Communication / Graphisme",
+    "criticality": "P0",
+    "update": "À chaque étape charte",
+    "writes": "Oui",
+    "source": "Décisions identité, mémo logo",
+    "risk": "Supports incohérents.",
+    "next": "Reporter décisions nom/couleurs/symbole depuis Décisions."
+  },
+  {
+    "name": "📱 Posts fondateurs",
+    "domain": "Réseaux sociaux",
+    "role": "Backlog des premiers posts : angle, canal, asset, CTA, validation, budget.",
+    "owner": "Communication",
+    "criticality": "P0",
+    "update": "Hebdo puis quotidien",
+    "writes": "Oui",
+    "source": "Charte, site, décisions",
+    "risk": "Publication sans CTA ou sans asset validé.",
+    "next": "Valider statut et bureau référent avant publication."
+  },
+  {
+    "name": "🌐 Domaine & Réseaux",
+    "domain": "Domaine / réseaux",
+    "role": "Domaines, handles, pages officielles, soutien/cagnottes, preuve, risque, budget.",
+    "owner": "Communication / Web / Bureau",
+    "criticality": "P0",
+    "update": "Avant création puis suivi",
+    "writes": "Oui",
+    "source": "Décisions nom/domaine/réseaux",
+    "risk": "Mauvais lien officiel ou compte non maîtrisé.",
+    "next": "Vérifier disponibilités, propriétaire légal, admins."
+  },
+  {
+    "name": "🔐 Accès & Admins",
+    "domain": "Sécurité",
+    "role": "Matrice propriétaires, admins, 2FA, secours et risques pour comptes publics.",
+    "owner": "Bureau / Admin",
+    "criticality": "P0",
+    "update": "Avant toute création",
+    "writes": "Oui",
+    "source": "Domaine, réseaux, HelloAsso, Drive",
+    "risk": "Perte d’accès ou compte personnel isolé.",
+    "next": "Deux admins + propriétaire légal avant exécution."
+  },
+  {
+    "name": "🧩 UI Scripts Audit",
+    "domain": "Technique UI",
+    "role": "Inventaire scripts UI, décisions garder/remplacer/déprécier, familles cibles.",
+    "owner": "JRbIA",
+    "criticality": "P0",
+    "update": "Avant installation script",
+    "writes": "Non",
+    "source": "Drive technique, Script Registry",
+    "risk": "Réinstaller un script obsolète.",
+    "next": "Ne jamais installer un script non-live sans lecture backup."
+  },
+  {
+    "name": "📘 Aide Notice",
+    "domain": "Aide / notice",
+    "role": "Source de documentation interne : onglets, process, lexique, règles, IA optionnelle.",
+    "owner": "JRbIA / Bureau",
+    "criticality": "P1",
+    "update": "À chaque évolution structurelle",
+    "writes": "Oui",
+    "source": "Sheet Registry, règles projet",
+    "risk": "Aide non à jour.",
+    "next": "Mettre à jour après chaque ajout/rename d’onglet."
+  },
+  {
+    "name": "🧪 IA Staging",
+    "domain": "IA optionnelle",
+    "role": "Staging des réponses IA en attente de validation humaine.",
+    "owner": "JRbIA",
+    "criticality": "P1",
+    "update": "Après tests IA",
+    "writes": "Oui si validé",
+    "source": "Gemini modules / sources",
+    "risk": "Injecter de l’IA non validée.",
+    "next": "IA reste optionnelle/off par défaut."
+  },
+  {
+    "name": "📅 Publications",
+    "domain": "Planning éditorial",
+    "role": "Calendrier multi-canal et suivi des publications.",
+    "owner": "Communication",
+    "criticality": "P0",
+    "update": "Quotidien",
+    "writes": "Oui",
+    "source": "Posts, Idées, Actions",
+    "risk": "Calendrier incohérent.",
+    "next": "Créer depuis posts validés uniquement."
+  },
+  {
+    "name": "⏱️ Règles Planning",
+    "domain": "Planning",
+    "role": "Règles de planification, créneaux, délais et contraintes de publication.",
+    "owner": "JRbIA / Communication",
+    "criticality": "P1",
+    "update": "À chaque règle",
+    "writes": "Oui",
+    "source": "Publication, stratégie",
+    "risk": "Automatiser un mauvais créneau.",
+    "next": "Valider avant apply planning."
+  },
+  {
+    "name": "🛠️ Planning Dev",
+    "domain": "Développement",
+    "role": "Backlog de développement et suivi des chantiers techniques.",
+    "owner": "JRbIA",
+    "criticality": "P1",
+    "update": "Hebdo",
+    "writes": "Oui",
+    "source": "Besoins outils",
+    "risk": "Confondre dev et régie technique événement.",
+    "next": "Garder séparé de Régie Technique."
+  },
+  {
+    "name": "📰 Presse",
+    "domain": "Relations presse",
+    "role": "Communiqués, contacts, relances J+3/J+7, retombées.",
+    "owner": "Communication",
+    "criticality": "P0",
+    "update": "Hebdo puis campagne",
+    "writes": "Oui",
+    "source": "CRM, décisions, médias",
+    "risk": "Relance tardive ou non tracée.",
+    "next": "Relier chaque contact CRM et chaque retombée source."
+  },
+  {
+    "name": "🌐 Site Web",
+    "domain": "Site public",
+    "role": "Backlog pages : accueil, bénévoles, presse, partenaires, soutenir, FAQ, transparence.",
+    "owner": "Communication / Web",
+    "criticality": "P0",
+    "update": "Hebdo",
+    "writes": "Oui",
+    "source": "Domaine, décisions, contenu",
+    "risk": "Pas de point d’atterrissage public.",
+    "next": "Valider arborescence avant publication."
+  },
+  {
+    "name": "🖥️ Admin Web",
+    "domain": "Admin site",
+    "role": "Paramétrage admin web, URL, état, dialogue privé.",
+    "owner": "JRbIA / Admin",
+    "criticality": "P1",
+    "update": "À chaque changement site",
+    "writes": "Oui",
+    "source": "Site Web, APIs",
+    "risk": "Exposer un admin ou une URL non validée.",
+    "next": "Garder privé, sécurisé, documenté."
+  },
+  {
+    "name": "🤖 Chatbot",
+    "domain": "Chatbot public/privé",
+    "role": "Backlog FAQ, réponses, garde-fous, sources et fallback humain.",
+    "owner": "JRbIA / Communication",
+    "criticality": "P1",
+    "update": "Après FAQ validée",
+    "writes": "Oui",
+    "source": "FAQ, Sources, Site",
+    "risk": "Répondre sans source ou avant validation.",
+    "next": "Pas avant sources/FAQ propres."
+  },
+  {
+    "name": "🔌 APIs & Automations",
+    "domain": "Automatisations",
+    "role": "Registre APIs, intégrations, modes manuel/semi-auto/auto et gardes-fous.",
+    "owner": "JRbIA",
+    "criticality": "P0",
+    "update": "À chaque patch",
+    "writes": "Oui",
+    "source": "Script Registry, paramètres",
+    "risk": "Sur-automatisation ou live non autorisé.",
+    "next": "Toute action externe doit être validée."
+  },
+  {
+    "name": "💡 Idées contenus",
+    "domain": "Idées éditoriales",
+    "role": "Réserve d’idées, angles, sujets, formats et audiences.",
+    "owner": "Communication",
+    "criticality": "P2",
+    "update": "Continu",
+    "writes": "Oui",
+    "source": "Sources, réunions",
+    "risk": "Idées non priorisées.",
+    "next": "Transformer en posts après validation."
+  },
+  {
+    "name": "⚙️ Paramètres",
+    "domain": "Paramètres",
+    "role": "Listes, statuts, règles projet, plateformes, modes/API et gardes-fous.",
+    "owner": "JRbIA",
+    "criticality": "P0",
+    "update": "À chaque règle",
+    "writes": "Oui",
+    "source": "Décisions de gouvernance",
+    "risk": "Validation incohérente dans les onglets.",
+    "next": "Maintenir comme référentiel de listes."
+  },
+  {
+    "name": "🔎 Contrôles",
+    "domain": "Qualité",
+    "role": "Résultats de contrôles qualité et alertes de cohérence.",
+    "owner": "JRbIA",
+    "criticality": "P0",
+    "update": "À chaque import/apply",
+    "writes": "Oui",
+    "source": "QA Data Rules",
+    "risk": "Données invalides non détectées.",
+    "next": "Lire avant tout apply massif."
+  },
+  {
+    "name": "🧾 Logs",
+    "domain": "Logs",
+    "role": "Journal d’exécution Apps Script, audits et erreurs.",
+    "owner": "JRbIA",
+    "criticality": "P0",
+    "update": "À chaque exécution",
+    "writes": "Oui",
+    "source": "Scripts, assistant",
+    "risk": "Perdre la trace des actions.",
+    "next": "Consulter après chaque run."
+  },
+  {
+    "name": "📆 Calendrier Comms",
+    "domain": "Calendrier",
+    "role": "Vue calendrier éditoriale et événements de communication.",
+    "owner": "Communication",
+    "criticality": "P1",
+    "update": "Hebdo",
+    "writes": "Oui",
+    "source": "Publications, Calendar Sync",
+    "risk": "Décalage avec le planning réel.",
+    "next": "Synchroniser seulement après dry-run OK."
+  },
+  {
+    "name": "📆 Calendar Sync",
+    "domain": "Google Calendar",
+    "role": "Synchronisation calendrier, dry-run/apply, calendrier dédié et partage.",
+    "owner": "JRbIA",
+    "criticality": "P1",
+    "update": "À chaque sync",
+    "writes": "Oui calendar",
+    "source": "Publications, règles planning",
+    "risk": "Créer des événements non validés.",
+    "next": "Dry-run obligatoire avant apply."
+  },
+  {
+    "name": "📤 Exports",
+    "domain": "Exports",
+    "role": "Packs, snapshots, rapports, liens Drive/GitHub, livrables.",
+    "owner": "JRbIA",
+    "criticality": "P0",
+    "update": "À chaque export",
+    "writes": "Oui",
+    "source": "Backups, scripts, rapports",
+    "risk": "Perdre un lien de preuve.",
+    "next": "Relier à Releases & Backups."
+  },
+  {
+    "name": "🧭 Récupération modèles",
+    "domain": "Récupération",
+    "role": "Suivi des modèles récupérés depuis anciens projets et adaptations utiles.",
+    "owner": "JRbIA",
+    "criticality": "P1",
+    "update": "À chaque import modèle",
+    "writes": "Oui",
+    "source": "LCR/GDVG/JRbIA",
+    "risk": "Importer un modèle hors contexte.",
+    "next": "Adapter avant usage."
+  },
+  {
+    "name": "📚 Sources & preuves",
+    "domain": "Sources",
+    "role": "Registre maître des sources, URLs, preuves, fiabilité et citations.",
+    "owner": "JRbIA",
+    "criticality": "P0",
+    "update": "À chaque collecte",
+    "writes": "Oui",
+    "source": "Web, documents, Drive",
+    "risk": "Décision sans preuve.",
+    "next": "Toute donnée importante doit citer une source."
+  },
+  {
+    "name": "👥 CRM contacts",
+    "domain": "CRM",
+    "role": "Presse, partenaires, institutions, plateformes, fournisseurs et prochaines actions.",
+    "owner": "Communication",
+    "criticality": "P0",
+    "update": "Hebdo",
+    "writes": "Oui",
+    "source": "Réunion, presse, partenaires",
+    "risk": "Contact oublié ou non relancé.",
+    "next": "Créer entrée pour tout acteur externe."
+  },
+  {
+    "name": "🖼️ Médias & droits",
+    "domain": "Médias",
+    "role": "Photos, logos, vidéos, droits, propriétaires et preuves d’autorisation.",
+    "owner": "Communication",
+    "criticality": "P0",
+    "update": "À chaque asset",
+    "writes": "Oui",
+    "source": "Logo, posts, presse",
+    "risk": "Utiliser un média sans droits.",
+    "next": "Aucun asset public sans statut droit."
+  },
+  {
+    "name": "🧩 Script Registry",
+    "domain": "Technique",
+    "role": "Scripts, fonctions, menus, scopes, statuts live/non-live et règles live-first.",
+    "owner": "JRbIA",
+    "criticality": "P0",
+    "update": "À chaque release",
+    "writes": "Non",
+    "source": "Backup live, Drive technique",
+    "risk": "Installer un mauvais script.",
+    "next": "Lire avant tout patch."
+  },
+  {
+    "name": "🗂️ Sheet Registry",
+    "domain": "Gouvernance",
+    "role": "Registre des onglets, missions, owners, criticités et règles de mise à jour.",
+    "owner": "JRbIA",
+    "criticality": "P0",
+    "update": "À chaque ajout/rename",
+    "writes": "Non",
+    "source": "Structure Sheet",
+    "risk": "Onglet sans mission claire.",
+    "next": "Mettre à jour avec chaque nouvel onglet."
+  },
+  {
+    "name": "✅ QA Data Rules",
+    "domain": "Qualité données",
+    "role": "Règles de contrôle, blocages P0/P1 et prérequis avant imports/apply.",
+    "owner": "JRbIA",
+    "criticality": "P0",
+    "update": "Avant chaque import",
+    "writes": "Oui",
+    "source": "Contrôles, registres",
+    "risk": "Appliquer des données non conformes.",
+    "next": "Renforcer les règles sources obligatoires."
+  },
+  {
+    "name": "📦 Releases & Backups",
+    "domain": "Release",
+    "role": "Versions, backups, commits, packs, rollback et preuves de release.",
+    "owner": "JRbIA",
+    "criticality": "P0",
+    "update": "À chaque release",
+    "writes": "Oui",
+    "source": "Exports, Drive, GitHub",
+    "risk": "Rollback impossible.",
+    "next": "Sceller chaque patch installé."
+  },
+  {
+    "name": "🧱 Architecture Scripts",
+    "domain": "Architecture technique",
+    "role": "Architecture Apps Script, modules, familles, dépendances et politique live-first.",
+    "owner": "JRbIA",
+    "criticality": "P0",
+    "update": "À chaque refactor",
+    "writes": "Oui",
+    "source": "Script Registry",
+    "risk": "Architecture incohérente.",
+    "next": "Documenter avant refactor."
+  },
+  {
+    "name": "🤖 IA optionnelle",
+    "domain": "IA gouvernance",
+    "role": "Cadre IA optionnelle, statuts, règles, FAQ/source-first et risques.",
+    "owner": "JRbIA / Communication",
+    "criticality": "P1",
+    "update": "Après validation sources",
+    "writes": "Oui",
+    "source": "Aide, FAQ, APIs",
+    "risk": "Gemini devient source de vérité à tort.",
+    "next": "Laisser OFF par défaut."
+  },
+  {
+    "name": "🧪 IA Staging — doublon encodage",
+    "domain": "Doublon / à nettoyer",
+    "role": "Doublon encodage de IA Staging conservé temporairement pour audit.",
+    "owner": "JRbIA",
+    "criticality": "P2",
+    "update": "À nettoyer",
+    "writes": "Non",
+    "source": "Historique encodage",
+    "risk": "Confusion utilisateur.",
+    "next": "Supprimer après backup validé si non nécessaire."
+  },
+  {
+    "name": "📘 CDC Bornat",
+    "domain": "CDC / gouvernance",
+    "role": "Exigences Bornat sourcées par page, preuves, actions et zones liées.",
+    "owner": "Documentation / Pilotage",
+    "criticality": "P0",
+    "update": "À chaque évolution CDC",
+    "writes": "Oui",
+    "source": "Guide Bornat, Docs Référence",
+    "risk": "Non-conformité au CDC.",
+    "next": "Compléter extraction et liens Drive."
+  },
+  {
+    "name": "🗺️ Zones & Implantations",
+    "domain": "Technique / SIG",
+    "role": "Emprises candidates/validées, métrés, contraintes, propriétaires, scénarios, liens QGIS.",
+    "owner": "Régie technique",
+    "criticality": "P0",
+    "update": "À chaque repérage",
+    "writes": "Oui",
+    "source": "CDC, QGIS, IGN",
+    "risk": "Métré ou zone non fiable.",
+    "next": "Mesurer et sourcer les emprises."
+  },
+  {
+    "name": "🧭 Scénarios & Arbitrages",
+    "domain": "Technique / décision",
+    "role": "Comparaison options A/B/C, impacts, scores, avis et décision tracée.",
+    "owner": "Comité / Régie",
+    "criticality": "P0",
+    "update": "À chaque scénario",
+    "writes": "Oui",
+    "source": "Zones, contraintes, CDC",
+    "risk": "Arbitrage non justifié.",
+    "next": "Créer scénarios après métrés."
+  },
+  {
+    "name": "📐 Contraintes & Jauges",
+    "domain": "Technique / sécurité",
+    "role": "Contraintes, capacités, hypothèses, marges, jauges proposées et avis externes.",
+    "owner": "Sécurité / Régie",
+    "criticality": "P0",
+    "update": "À chaque avis",
+    "writes": "Oui",
+    "source": "Zones, autorités",
+    "risk": "Jauge réglementaire mal validée.",
+    "next": "Sourcer chaque contrainte et avis."
+  },
+  {
+    "name": "🛠️ Régie Technique",
+    "domain": "Technique / opérations",
+    "role": "Actions et livrables techniques liés au CDC, zones, scénarios, coûts et contrôles.",
+    "owner": "Régie technique",
+    "criticality": "P0",
+    "update": "Hebdo puis quotidien événement",
+    "writes": "Oui",
+    "source": "CDC, zones, arbitrages",
+    "risk": "Action technique non coordonnée.",
+    "next": "Nommer responsables et dater actions."
+  },
+  {
+    "name": "📚 Docs Référence",
+    "domain": "Documentation",
+    "role": "Documents maîtres, versions, liens Drive, périmètres et exigences liées.",
+    "owner": "Documentation",
+    "criticality": "P0",
+    "update": "À chaque document",
+    "writes": "Oui",
+    "source": "Drive, CDC",
+    "risk": "Référence non suivie ou obsolète.",
+    "next": "Renseigner guide et accès Drive."
+  }
+];
+
+const PROCESSES = [
+  {
+    "title": "Réunion → Décisions → Actions",
+    "steps": [
+      "Saisir le réel dans 📌 Réunion 11/07",
+      "Reporter tout arbitrage dans 🗳️ Décisions",
+      "Créer les tâches dans ⚡ Actions",
+      "Propager dans CRM, Site, Accès, Domaine/Réseaux, Logs et Releases"
+    ]
+  },
+  {
+    "title": "Publication réseau social",
+    "steps": [
+      "Valider angle et CTA dans 📱 Posts fondateurs",
+      "Vérifier assets et droits dans 🖼️ Médias & droits",
+      "Planifier dans 📅 Publications",
+      "Tracer statut et retour dans Logs / Presse si besoin"
+    ]
+  },
+  {
+    "title": "Achat domaine / création pages",
+    "steps": [
+      "Valider nom dans 🗳️ Décisions",
+      "Vérifier disponibilité dans 🌐 Domaine & Réseaux",
+      "Contrôler propriétaire et 2 admins dans 🔐 Accès & Admins",
+      "Créer action puis tracer en Releases / Logs"
+    ]
+  },
+  {
+    "title": "Régie technique",
+    "steps": [
+      "Sourcer CDC dans 📘 CDC Bornat et 📚 Docs Référence",
+      "Identifier zones dans 🗺️ Zones & Implantations",
+      "Comparer options dans 🧭 Scénarios & Arbitrages",
+      "Vérifier contraintes/jauges dans 📐 Contraintes & Jauges",
+      "Exécuter dans 🛠️ Régie Technique"
+    ]
+  },
+  {
+    "title": "Patch script sécurisé",
+    "steps": [
+      "Lire le dernier ZIP live backup",
+      "Vérifier Script Registry : actif live ou patch non-live",
+      "Installer seulement les fichiers listés",
+      "Tester, puis backup complet Drive + GitHub"
+    ]
+  }
+];
+
+const RULES = [
+  "Source de vérité script : dernier ZIP live issu de projects.getContent, pas un pack local ni un dossier Drive.",
+  "Si doute de fraîcheur backup : alerte + arrêt avant toute MAJ script.",
+  "Aucun nouveau onOpen ni FBR_MENU_MASTER. Le menu existant reste maître.",
+  "Gemini/IA reste optionnel, OFF par défaut, jamais source de vérité ni action automatique.",
+  "Aucune création externe, achat, publication ou synchronisation sans décision Validée + propriétaire + accès sécurisés.",
+  "Chaque décision validée doit être propagée dans les onglets impactés."
+];
+
+const FAQ = [
+  {
+    "q": "Pourquoi le menu disparaît ?",
+    "a": "Une erreur de compilation dans n’importe quel fichier .gs bloque onOpen. Vérifier Exécutions, puis restaurer 00_Code.gs / 03_Menu_UI.gs depuis backup live."
+  },
+  {
+    "q": "Puis-je lancer onOpen depuis l’éditeur ?",
+    "a": "Non. Utiliser FELIBREE_getUiState pour déclencher autorisations/diagnostic, puis rouvrir le Sheet."
+  },
+  {
+    "q": "Pourquoi pas de captures bitmap partout ?",
+    "a": "La sidebar serait trop lourde et dépendante de liens Drive. Les mini-captures HTML donnent une vue maintenable et embarquée."
+  },
+  {
+    "q": "Où sont les backups ?",
+    "a": "Dans 🧰 TECHNIQUE — Apps Script CLASP GitHub, et le miroir GitHub dans JRbJAB/Felibrejada/main/apps-script."
+  },
+  {
+    "q": "Comment ajouter un onglet ?",
+    "a": "Créer l’onglet, l’ajouter dans Sheet Registry, documenter Aide Notice, puis tracer dans Logs/Releases."
+  },
+  {
+    "q": "Quand utiliser l’IA ?",
+    "a": "Après sources/FAQ propres. Toujours en staging/dry-run, jamais en source de vérité automatique."
+  }
+];
+let view = 'tabs';
+function esc(s){return String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]));}
+function norm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
+function setView(v){view=v;['Tabs','Processes','Rules','Faq'].forEach(x=>document.getElementById('view'+x).classList.remove('active'));document.getElementById('view'+v.charAt(0).toUpperCase()+v.slice(1)).classList.add('active');render();}
+function initDomains(){const sel=document.getElementById('domain');[...new Set(TABS.map(t=>t.domain.split('/')[0].trim()))].sort().forEach(d=>{let o=document.createElement('option');o.value=d;o.textContent=d;sel.appendChild(o);});}
+function mini(t){let cells='';for(let r=0;r<5;r++){cells+='<tr>';for(let c=0;c<5;c++){cells+='<td>'+ (r===0?['ID','Statut','Owner','Source','Action'][c] : (c===0?t.criticality:(c===1?t.update.split(' ')[0]:(c===2?t.owner.split('/')[0]:(c===3?'Source':'✓'))))) +'</td>';}cells+='</tr>';}return '<div class="mini"><div class="bar">'+esc(t.name)+'</div><div class="sheet"><table>'+cells+'</table></div></div>';}
+function tabCard(t){let cls=t.criticality==='P0'?'p0':(t.criticality==='P1'?'p1':'p2');return '<div class="card tab-card" data-text="'+esc(norm(Object.values(t).join(' ')))+'"><h3>'+esc(t.name)+'</h3><div><span class="badge '+cls+'">'+esc(t.criticality)+'</span><span class="badge">'+esc(t.domain)+'</span><span class="badge ok">'+esc(t.update)+'</span></div>'+mini(t)+'<p><b>Rôle :</b> '+esc(t.role)+'</p><div class="cols"><div><b>Owner</b><br>'+esc(t.owner)+'</div><div><b>Source</b><br>'+esc(t.source)+'</div><div><b>Risque</b><br>'+esc(t.risk)+'</div><div><b>Prochaine action</b><br>'+esc(t.next)+'</div></div></div>';}
+function renderTabs(){let q=norm(document.getElementById('search').value),d=document.getElementById('domain').value;let list=TABS.filter(t=>(!d||t.domain.includes(d))&&(!q||norm(Object.values(t).join(' ')).includes(q)));return '<h2 class="section-title">Onglets ('+list.length+'/'+TABS.length+')</h2><div class="grid">'+list.map(tabCard).join('')+'</div>';}
+function renderProcesses(){return '<h2 class="section-title">Parcours métier</h2>'+PROCESSES.map(p=>'<div class="card"><h3>'+esc(p.title)+'</h3><div class="timeline">'+p.steps.map(s=>'<div class="step"><div>'+esc(s)+'</div></div>').join('')+'</div></div>').join('');}
+function renderRules(){return '<h2 class="section-title">Règles dures</h2>'+RULES.map((r,i)=>'<div class="card rule"><b>Règle '+(i+1)+'</b><br>'+esc(r)+'</div>').join('')+'<div class="card danger"><b>Script live-first :</b> aucun patch Apps Script / CLASP / GitHub sans lecture du dernier ZIP live backup. Si doute de fraîcheur : arrêt.</div>';}
+function renderFaq(){return '<h2 class="section-title">FAQ / dépannage</h2>'+FAQ.map(f=>'<div class="card"><h3>'+esc(f.q)+'</h3><p>'+esc(f.a)+'</p></div>').join('');}
+function render(){document.getElementById('content').innerHTML=view==='tabs'?renderTabs():view==='processes'?renderProcesses():view==='rules'?renderRules():renderFaq();}
+initDomains();render();
+</script>
+</body>
+</html>
