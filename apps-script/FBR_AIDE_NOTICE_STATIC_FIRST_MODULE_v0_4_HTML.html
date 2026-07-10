@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    body{font-family:Arial,sans-serif;margin:14px;color:#172033;line-height:1.35}
+    h1{font-size:18px;margin:0 0 8px;color:#0b3d91}
+    h2{font-size:14px;margin:16px 0 6px;color:#0b5a2a}
+    .box{border:1px solid #d9e2ec;border-radius:8px;padding:10px;margin:8px 0;background:#f8fbff}
+    .warn{background:#fff7d6;border-color:#f2d36b}
+    .ok{background:#edf8ef;border-color:#9bd4a8}
+    code{background:#eef2f7;padding:1px 4px;border-radius:3px}
+    textarea{width:100%;height:80px;box-sizing:border-box}
+    button{margin:6px 4px 6px 0;padding:8px 10px;border:0;border-radius:6px;background:#0b3d91;color:white;cursor:pointer}
+    pre{white-space:pre-wrap;background:#f4f6f8;padding:8px;border-radius:6px;max-height:220px;overflow:auto}
+  </style>
+</head>
+<body>
+  <h1>📘 Aide Notice — statique d’abord</h1>
+  <div class="box ok">
+    <b>Politique :</b> l’aide interne fonctionne d’abord avec la notice, le lexique, le cockpit et les onglets validés. Gemini est optionnel et OFF par défaut.
+  </div>
+
+  <h2>Règle projet</h2>
+  <div class="box">
+    Le PV capte. Décisions arbitre. Actions exécute. CRM référence. Accès sécurise. Cockpit pilote.
+  </div>
+
+  <h2>À utiliser pour</h2>
+  <ul>
+    <li>Comprendre les onglets.</li>
+    <li>Savoir où propager une décision.</li>
+    <li>Lire le lexique et les statuts.</li>
+    <li>Préparer une checklist sans action automatique.</li>
+  </ul>
+
+  <h2>IA optionnelle</h2>
+  <div class="box warn">
+    Gemini ne doit pas devenir la source de vérité. Il ne modifie rien, ne publie rien et ne déclenche aucune action.
+  </div>
+  <textarea id="q" placeholder="Question interne... ex. Où propager une décision validée sur le domaine ?"></textarea>
+  <br>
+  <button onclick="dryRun()">Dry run prompt</button>
+  <button onclick="askGemini()">Questionner Gemini si activé</button>
+  <pre id="out">Prêt.</pre>
+
+  <script>
+    function show(x){document.getElementById('out').textContent=typeof x==='string'?x:JSON.stringify(x,null,2)}
+    function dryRun(){google.script.run.withSuccessHandler(show).withFailureHandler(show).FBR_HELP_STATIC_dryRunGemini_(document.getElementById('q').value)}
+    function askGemini(){google.script.run.withSuccessHandler(show).withFailureHandler(show).FBR_HELP_STATIC_askGeminiOptional_(document.getElementById('q').value)}
+    google.script.run.withSuccessHandler(show).withFailureHandler(show).FBR_HELP_STATIC_getState_();
+  </script>
+</body>
+</html>
