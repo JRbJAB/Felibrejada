@@ -2,6 +2,7 @@ function FBR_onOpen(e) {
   var ui = SpreadsheetApp.getUi();
   ui.createMenu('🎉 Félibrée Admin')
     .addItem('🎛️ Ouvrir la sidebar', 'FELIBREE_openSidebar')
+    .addItem('📘 Aide Notice', 'FELIBREE_openAideNotice')
     .addItem('🖥️ Admin web / calendrier intégré', 'FELIBREE_openAdminWeb')
     .addSeparator()
     .addItem('🔄 Actualiser cockpit', 'FELIBREE_refreshCockpit')
@@ -58,6 +59,7 @@ function FBR_sidebarAction_(action) {
     case 'full-backup-apply': return FBR_backupDriveClaspGithub_(false);
     case 'github-sync-dry-run': return FBR_syncGithubFromLiveSource_(true);
     case 'github-sync-apply': return FBR_syncGithubFromLiveSource_(false);
+    case 'open-aide-notice': return FBR_HELP_STATIC_showSidebar_();
     case 'open-admin-web': return FBR_showAdminWebDialog_();
     case 'install-triggers': return FBR_installTriggers_();
     case 'remove-triggers': return FBR_removeTriggers_();

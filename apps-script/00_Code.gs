@@ -20,6 +20,15 @@ function FELIBREE_openSidebar() {
 }
 
 
+
+function FELIBREE_openAideNotice() {
+  return FBR_HELP_STATIC_showSidebar_();
+}
+
+function FELIBREE_aideNoticeDiagnostic() {
+  return FBR_HELP_STATIC_diagnosticLogOnly_();
+}
+
 function doGet(e) {
   return FBR_doGetAdminWeb_(e);
 }
