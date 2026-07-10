@@ -30,6 +30,13 @@
   </div>
 
   <div class="card">
+    <div class="muted">Aide Notice</div>
+    <button class="secondary" onclick="run('open-aide-notice')">📘 Aide Notice — sidebar</button>
+    <button class="primary" onclick="run('open-aide-notice-fullscreen')">📘 Aide Notice — plein écran</button>
+  </div>
+
+
+  <div class="card">
     <button class="secondary" onclick="run('calendar-dedicated-dry-run')">📆 Calendrier dédié — dry-run</button>
     <button class="warning" onclick="confirmRun('calendar-dedicated-apply', 'Création réelle du calendrier dédié. Continuer uniquement si FELIBREE_ALLOW_CALENDAR_CREATE=TRUE est configuré dans les propriétés du script.')">📆 Créer calendrier dédié — APPLY protégé</button>
     <button class="secondary" onclick="run('calendar-share-dry-run')">👥 Partage calendrier — dry-run</button>

@@ -29,6 +29,15 @@ function FELIBREE_aideNoticeDiagnostic() {
   return FBR_HELP_STATIC_diagnosticLogOnly_();
 }
 
+
+function FELIBREE_openAideNoticeFullscreen() {
+  return FBR_HELP_STATIC_showFullscreenDialog_();
+}
+
+function FELIBREE_aideNoticeFullscreenDiagnostic() {
+  return FBR_HELP_STATIC_fullscreenDiagnostic_();
+}
+
 function doGet(e) {
   return FBR_doGetAdminWeb_(e);
 }
