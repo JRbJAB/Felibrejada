@@ -14,11 +14,11 @@ var FBR_GEMINI = {
   DEFAULT_MODEL: 'gemini-3.5-flash',
   SHEETS: {
     STAGING: String.fromCodePoint(0x1F9EA) + ' IA Staging',
-    SOURCES: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…Â¡ Sources & preuves',
-    CHECKS: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ…Â½ ContrÃƒÆ’Ã‚Â´les',
-    LOGS: 'ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â¾ Logs',
-    EXPORTS: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¤ Exports',
-    GEMINI: 'ÃƒÂ°Ã…Â¸Ã‚Â¤Ã¢â‚¬â€œ IA Recherche Gemini'
+    SOURCES: String.fromCodePoint(0x1F4DA) + ' Sources & preuves',
+    CHECKS: String.fromCodePoint(0x1F50E) + ' Contr' + String.fromCharCode(0x00F4) + 'les',
+    LOGS: String.fromCodePoint(0x1F9FE) + ' Logs',
+    EXPORTS: String.fromCodePoint(0x1F4E4) + ' Exports',
+    GEMINI: String.fromCodePoint(0x1F916) + ' IA Recherche Gemini'
   },
   PROP: {
     API_KEY: 'GEMINI_API_KEY',

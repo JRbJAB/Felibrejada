@@ -37,6 +37,30 @@
 
 
   <div class="card">
+    <div class="muted">🧪 IA Staging / Gemini — validation avant métier</div>
+    <button class="primary" onclick="run('ia-staging-open')">🧪 Ouvrir IA Staging</button>
+    <button class="secondary" onclick="run('ia-staging-summary')">📊 Résumé QA staging</button>
+    <button class="secondary" onclick="run('ia-staging-filter-priority')">🟢 Filtrer PRIORITY</button>
+    <button class="secondary" onclick="run('ia-staging-filter-context')">🟠 Filtrer CONTEXT</button>
+    <button class="secondary" onclick="run('ia-staging-filter-reject')">🔴 Filtrer REJECT</button>
+    <button class="secondary" onclick="run('ia-staging-clear-filter')">↩️ Enlever filtre</button>
+    <button class="secondary" onclick="run('ia-staging-gemini-status')">🧪 Gemini status</button>
+    <button class="secondary" onclick="run('ia-staging-gemini-search-dry-run')">🔎 Gemini Search — dry-run</button>
+    <button class="warning" onclick="confirmRun('ia-staging-gemini-search-apply', 'Écrire de nouvelles lignes uniquement dans 🧪 IA Staging ? Aucune injection métier.')">🔎 Gemini Search → Staging APPLY</button>
+    <button class="warning" onclick="confirmRun('ia-staging-gemini-url-apply', 'Écrire URL Context uniquement dans 🧪 IA Staging ? Aucune injection métier.')">🔗 Gemini URL Context → Staging APPLY</button>
+    <button class="secondary" onclick="run('ia-staging-safe-guard')">🛡️ Vérifier garde-fou no métier</button>
+  </div>
+
+  <div class="card">
+    <div class="muted">🧩 Script Registry — alertes version live / backup</div>
+    <button class="secondary" onclick="run('registry-verify-dry-run')">🧩 Verify live vs backup — dry-run</button>
+    <button class="warning" onclick="confirmRun('registry-verify-apply', 'Écrire les alertes vert/orange/rouge dans 🧩 Script Registry ?')">🧩 Verify live vs backup — APPLY</button>
+    <button class="secondary" onclick="run('registry-open-alerts')">🚦 Ouvrir alertes drift</button>
+    <button class="secondary" onclick="run('registry-format-alerts')">🎨 Recolorer alertes</button>
+  </div>
+
+
+  <div class="card">
     <button class="secondary" onclick="run('calendar-dedicated-dry-run')">📆 Calendrier dédié — dry-run</button>
     <button class="warning" onclick="confirmRun('calendar-dedicated-apply', 'Création réelle du calendrier dédié. Continuer uniquement si FELIBREE_ALLOW_CALENDAR_CREATE=TRUE est configuré dans les propriétés du script.')">📆 Créer calendrier dédié — APPLY protégé</button>
     <button class="secondary" onclick="run('calendar-share-dry-run')">👥 Partage calendrier — dry-run</button>
@@ -90,6 +114,10 @@
         'Planning write: ' + (s.planningWriteEnabled ? '<span class="ok">ON</span>' : '<span class="bad">OFF / apply bloqué</span>') + '<br>' +
         'Source backup: ' + (s.sourceBackupEnabled ? '<span class="ok">ON</span>' : '<span class="bad">OFF / apply bloqué</span>') + '<br>' +
         'GitHub write: ' + (s.githubWriteEnabled ? '<span class="ok">ON</span>' : '<span class="bad">OFF / apply bloqué</span>') + '<br>' +
+        'IA Staging UI: ' + (s.iaStagingUiVersion || 'not-installed') + '<br>' +
+        'Registry gate: ' + (s.registryGateVersion || 'not-installed') + '<br>' +
+        'Aide Notice: ' + (s.aideNoticeVersion || 'not-installed') + '<br>' +
+        'Aide plein écran: ' + (s.aideNoticeFullscreenVersion || 'not-installed') + '<br>' +
         'GitHub repo: ' + s.githubOwner + '/' + s.githubRepo + ' [' + s.githubBranch + '] / ' + s.githubPathPrefix;
 
       document.getElementById('adminWebLink').href = s.adminWebUrl || s.spreadsheetUrl;

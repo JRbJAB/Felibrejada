@@ -1,11 +1,11 @@
 /*
  * 32_IaStagingUi.js
  * UI safe layer for 🧪 IA Staging / Gemini review workflow.
- * v0.7.0 — staging only, no business-sheet injection.
+ * v0.7.3 — staging only, no business-sheet injection.
  */
 
 var FBR_IA_STAGING_UI = {
-  VERSION: 'felibree-ui-ia-staging-v0.7.0-20260709',
+  VERSION: 'felibree-ui-ia-staging-v0.7.3-20260710',
   HEADER_ROW: 4,
   FIRST_DATA_ROW: 5,
   LAST_COL: 17,

@@ -10,6 +10,17 @@ function FBR_onOpen(e) {
     .addItem('🔎 Contrôles qualité', 'FELIBREE_runQualityChecks')
     .addItem('📰 Relances presse dues', 'FELIBREE_showPressDue')
     .addSeparator()
+    .addItem('🧪 IA Staging — ouvrir', 'FELIBREE_openIaStaging')
+    .addItem('🧪 IA Staging — résumé QA', 'FELIBREE_iaStagingSummary')
+    .addItem('🧪 IA Staging — filtre PRIORITY', 'FELIBREE_iaStagingFilterPriority')
+    .addItem('🧪 IA Staging — filtre CONTEXT', 'FELIBREE_iaStagingFilterContext')
+    .addItem('🧪 IA Staging — filtre REJECT', 'FELIBREE_iaStagingFilterReject')
+    .addItem('🧪 IA Staging — enlever filtre', 'FELIBREE_iaStagingClearFilter')
+    .addSeparator()
+    .addItem('🧩 Registry gate — dry-run', 'FELIBREE_registryVerifyLiveVsBackupDryRun')
+    .addItem('🧩 Registry gate — APPLY alertes', 'FELIBREE_registryVerifyLiveVsBackupApply')
+    .addItem('🧩 Registry gate — ouvrir alertes', 'FELIBREE_registryOpenDriftAlerts')
+    .addSeparator()
     .addItem('💾 Source backup Drive — dry-run', 'FELIBREE_backupSourceDryRun')
     .addItem('💾 Source backup Drive — APPLY protégé', 'FELIBREE_backupSourceToDriveApply')
     .addItem('💾 Backup complet Drive + CLASP + GitHub — dry-run', 'FELIBREE_backupDriveClaspGithubDryRun')
@@ -54,6 +65,21 @@ function FBR_sidebarAction_(action) {
     case 'calendar-dry-run': return FBR_syncCalendar_(true);
     case 'calendar-apply': return FBR_syncCalendar_(false);
     case 'press-due': return FBR_pressDue_(true);
+    case 'ia-staging-open': return FBR_iaStagingOpen_();
+    case 'ia-staging-summary': return FBR_iaStagingSummary_();
+    case 'ia-staging-filter-priority': return FBR_iaStagingFilterByStatus_(FBR_IA_STAGING_UI.STATUS_PRIORITY);
+    case 'ia-staging-filter-context': return FBR_iaStagingFilterByStatus_(FBR_IA_STAGING_UI.STATUS_CONTEXT);
+    case 'ia-staging-filter-reject': return FBR_iaStagingFilterByStatus_(FBR_IA_STAGING_UI.STATUS_REJECT);
+    case 'ia-staging-clear-filter': return FBR_iaStagingClearFilter_();
+    case 'ia-staging-gemini-status': return FBR_iaStagingGeminiStatus_();
+    case 'ia-staging-gemini-search-dry-run': return FBR_iaStagingGeminiSearchDryRun_();
+    case 'ia-staging-gemini-search-apply': return FBR_iaStagingGeminiSearchApply_();
+    case 'ia-staging-gemini-url-apply': return FBR_iaStagingGeminiUrlApply_();
+    case 'ia-staging-safe-guard': return FBR_iaStagingAssertNoBusinessApply_();
+    case 'registry-verify-dry-run': return FBR_registryVerifyLiveVsBackup_(true);
+    case 'registry-verify-apply': return FBR_registryVerifyLiveVsBackup_(false);
+    case 'registry-open-alerts': return FBR_registryOpenDriftAlerts_();
+    case 'registry-format-alerts': return FBR_registryApplyConditionalFormatting_();
     case 'source-backup-dry-run': return FBR_backupSourceToDrive_(true);
     case 'source-backup-apply': return FBR_backupSourceToDrive_(false);
     case 'full-backup-dry-run': return FBR_backupDriveClaspGithub_(true);
@@ -95,6 +121,10 @@ function FBR_getUiState_() {
     spreadsheetUrl: FBR_ss_().getUrl(),
     adminWebUrl: FBR_getScriptProperty_(FBR.PROP.ADMIN_WEB_URL, ''),
     calendarEmbedUrl: FBR_calendarEmbedUrl_(),
-    calendarSettingsUrl: FBR_ADMIN_WEB_DEFAULTS.CALENDAR_SETTINGS_URL
+    calendarSettingsUrl: FBR_ADMIN_WEB_DEFAULTS.CALENDAR_SETTINGS_URL,
+    iaStagingUiVersion: (typeof FBR_IA_STAGING_UI !== 'undefined' && FBR_IA_STAGING_UI.VERSION) ? FBR_IA_STAGING_UI.VERSION : 'not-installed',
+    registryGateVersion: (typeof FBR_SCRIPT_REGISTRY_GATE !== 'undefined' && FBR_SCRIPT_REGISTRY_GATE.VERSION) ? FBR_SCRIPT_REGISTRY_GATE.VERSION : 'not-installed',
+    aideNoticeVersion: (typeof FBR_HELP_STATIC_MODULE_VERSION !== 'undefined' ? FBR_HELP_STATIC_MODULE_VERSION : 'not-installed'),
+    aideNoticeFullscreenVersion: (typeof FBR_HELP_STATIC_FULLSCREEN_VERSION !== 'undefined' ? FBR_HELP_STATIC_FULLSCREEN_VERSION : 'not-installed')
   };
 }
