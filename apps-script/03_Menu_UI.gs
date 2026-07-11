@@ -173,7 +173,13 @@ function FBR_sidebarAction_(action) {
       return FBR_HELP_STATIC_showFullscreenDialog_();
 
     case 'open-carte-mentale-com-fullscreen':
-      return FBR_CARTE_MENTALE_COM_showFullscreenDialog_();
+      return FELIBREE_openCarteMentaleComFullscreen();
+
+    case 'carte-mentale-com-v1-diagnostic':
+      return FELIBREE_carteMentaleComV1Diagnostic();
+
+    case 'carte-mentale-com-v1-dry-run':
+      return FELIBREE_refreshCarteMentaleComV1DryRun();
 
     case 'open-admin-web':
       return FBR_showAdminWebDialog_();
@@ -261,9 +267,11 @@ function FBR_getUiState_() {
         : 'not-installed',
 
     carteMentaleComVersion:
-      (typeof FBR_CARTE_MENTALE_COM_VERSION !== 'undefined')
-        ? FBR_CARTE_MENTALE_COM_VERSION
-        : 'not-installed',
+      (typeof FBR_CARTE_MENTALE_DYNAMIC_VERSION !== 'undefined')
+        ? FBR_CARTE_MENTALE_DYNAMIC_VERSION
+        : ((typeof FBR_CARTE_MENTALE_COM_VERSION !== 'undefined')
+            ? FBR_CARTE_MENTALE_COM_VERSION
+            : 'not-installed'),
 
     planCommunicationTimelineVersion:
       (typeof FBR_PLAN_COMM_TIMELINE_VERSION !== 'undefined')

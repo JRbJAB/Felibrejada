@@ -35,6 +35,13 @@
     <button class="primary" onclick="run('open-aide-notice-fullscreen')">📘 Aide Notice — plein écran</button>
   </div>
 
+  <div class="card">
+    <div class="muted">Carte mentale communication</div>
+    <button class="primary" onclick="run('open-carte-mentale-com-fullscreen')">🧠 Carte mentale COM — plein écran</button>
+    <button class="secondary" onclick="run('carte-mentale-com-v1-diagnostic')">🧠 Diagnostic carte mentale</button>
+    <button class="secondary" onclick="run('carte-mentale-com-v1-dry-run')">🧠 Dry-run MAJ carte mentale</button>
+  </div>
+
 
   <div class="card">
     <div class="muted">🧪 IA Staging / Gemini — validation avant métier</div>
@@ -118,6 +125,7 @@
         'Registry gate: ' + (s.registryGateVersion || 'not-installed') + '<br>' +
         'Aide Notice: ' + (s.aideNoticeVersion || 'not-installed') + '<br>' +
         'Aide plein écran: ' + (s.aideNoticeFullscreenVersion || 'not-installed') + '<br>' +
+        'Carte mentale COM: ' + (s.carteMentaleComVersion || 'not-installed') + '<br>' +
         'GitHub repo: ' + s.githubOwner + '/' + s.githubRepo + ' [' + s.githubBranch + '] / ' + s.githubPathPrefix;
 
       document.getElementById('adminWebLink').href = s.adminWebUrl || s.spreadsheetUrl;
