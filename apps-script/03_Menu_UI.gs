@@ -7,6 +7,7 @@ function FBR_onOpen(e) {
     .addItem('📘 Aide Notice — plein écran', 'FELIBREE_openAideNoticeFullscreen')
     .addItem('🧠 Carte mentale COM — plein écran', 'FELIBREE_openCarteMentaleComFullscreen')
     .addItem('🖥️ Admin web / calendrier intégré', 'FELIBREE_openAdminWeb')
+    .addItem('🎯 Plan communication — timeline HTML', 'FELIBREE_openPlanCommunicationTimeline')
 
     .addSeparator()
     .addItem('🔄 Actualiser cockpit', 'FELIBREE_refreshCockpit')
@@ -37,6 +38,8 @@ function FBR_onOpen(e) {
     .addSeparator()
     .addItem('⏱️ Planning strict — dry-run', 'FELIBREE_applyPlanningRulesDryRun')
     .addItem('⏱️ Appliquer règles planning — APPLY', 'FELIBREE_applyPlanningRulesApply')
+    .addItem('🎯 Plan communication — UI dry-run', 'FELIBREE_planCommunicationTimelineDryRun')
+    .addItem('🎯 Plan communication — APPLY protégé', 'FELIBREE_planCommunicationTimelineApply')
 
     .addSeparator()
     .addItem('📆 Calendrier dédié — dry-run', 'FELIBREE_prepareDedicatedCalendarDryRun')
@@ -175,6 +178,15 @@ function FBR_sidebarAction_(action) {
     case 'open-admin-web':
       return FBR_showAdminWebDialog_();
 
+    case 'plan-communication-open':
+      return FBR_PLAN_COMM_showTimelineDialog_();
+
+    case 'plan-communication-dry-run':
+      return FBR_PLAN_COMM_uiStrictDryRun_();
+
+    case 'plan-communication-apply':
+      return FBR_PLAN_COMM_uiStrictApply_();
+
     case 'install-triggers':
       return FBR_installTriggers_();
 
@@ -251,6 +263,11 @@ function FBR_getUiState_() {
     carteMentaleComVersion:
       (typeof FBR_CARTE_MENTALE_COM_VERSION !== 'undefined')
         ? FBR_CARTE_MENTALE_COM_VERSION
+        : 'not-installed',
+
+    planCommunicationTimelineVersion:
+      (typeof FBR_PLAN_COMM_TIMELINE_VERSION !== 'undefined')
+        ? FBR_PLAN_COMM_TIMELINE_VERSION
         : 'not-installed'
   };
 }
