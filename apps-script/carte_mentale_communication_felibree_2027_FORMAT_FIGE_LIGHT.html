@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Carte mentale — Communication Félibrée 2027</title>
+  <style>
+    :root {
+      --bg:#f3f6fb;
+      --ink:#08234d;
+      --muted:#607086;
+      --gold:#e0a000;
+      --line:#d6e0ee;
+    }
+    * { box-sizing:border-box; }
+    html, body { margin:0; min-height:100%; background:var(--bg); color:var(--ink); font-family:Arial, Helvetica, sans-serif; }
+    .toolbar {
+      position:sticky; top:0; z-index:10;
+      display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;
+      padding:10px 16px; background:#ffffffee; border-bottom:1px solid var(--line);
+      box-shadow:0 2px 10px rgba(8,35,77,.08);
+    }
+    .toolbar h1 { font-size:16px; margin:0; letter-spacing:.2px; }
+    .toolbar .meta { color:var(--muted); font-size:12px; }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; }
+    button, a.button {
+      border:0; border-radius:999px; padding:9px 13px; cursor:pointer;
+      background:#0a3b78; color:#fff; font-weight:700; text-decoration:none; font-size:12px;
+    }
+    button.secondary, a.secondary { background:#edf3fb; color:#0a3b78; border:1px solid #bcd0e9; }
+    main { padding:18px; }
+    .frame {
+      max-width:1680px; margin:0 auto; background:#fff; border:1px solid var(--line); border-radius:18px;
+      padding:12px; box-shadow:0 12px 36px rgba(8,35,77,.14);
+    }
+    .map {
+      width:100%; height:auto; display:block; border-radius:12px;
+      image-rendering:auto;
+    }
+    .caption {
+      max-width:1680px; margin:10px auto 0; color:var(--muted); font-size:12px; text-align:center;
+    }
+    @media print {
+      @page { size:A3 landscape; margin:8mm; }
+      html, body { background:#fff; }
+      .toolbar, .caption { display:none !important; }
+      main { padding:0; }
+      .frame {
+        max-width:none; width:100%; height:auto; border:0; border-radius:0; padding:0; box-shadow:none;
+        page-break-inside:avoid;
+      }
+      .map { width:100%; max-height:100vh; object-fit:contain; border-radius:0; }
+    }
+    @media screen and (max-width: 900px) {
+      main { padding:8px; }
+      .frame { border-radius:10px; padding:6px; }
+      .toolbar { align-items:flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <div>
+      <h1>Carte mentale — Communication Félibrée 2027</h1>
+      <div class="meta">Format figé · rendu image intégré · prêt impression A3 paysage · version réunion</div>
+    </div>
+    <div class="actions">
+      <button onclick="window.print()">🖨️ Imprimer / PDF</button>
+      <a class="button secondary" download="carte_mentale_communication_felibree_2027.png" href="carte_mentale_de_la_communication_2027.png">⬇️ Télécharger PNG</a>
+    </div>
+  </div>
+  <main>
+    <div class="frame">
+      <img class="map" alt="Carte mentale Communication Félibrée 2027" src="carte_mentale_de_la_communication_2027.png">
+    </div>
+    <div class="caption">Support de pilotage — communication, CDC, validations, exécution. Ne pas modifier à la volée : régénérer une nouvelle version si contenu changé.</div>
+  </main>
+</body>
+</html>
