@@ -55,6 +55,19 @@ function FELIBREE_setAdminWebUrl(url) {
 }
 
 
+
+function FELIBREE_openPlanCommunicationTimeline() {
+  return FBR_PLAN_COMM_showTimelineDialog_();
+}
+
+function FELIBREE_planCommunicationTimelineDryRun() {
+  return FBR_PLAN_COMM_uiStrictDryRun_();
+}
+
+function FELIBREE_planCommunicationTimelineApply() {
+  return FBR_PLAN_COMM_uiStrictApply_();
+}
+
 function FELIBREE_refreshCockpit() {
   return FBR_refreshCockpit_();
 }
