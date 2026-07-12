@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Plan Communication 2027 — Timeline</title>
+  <style>
+    :root{--navy:#153957;--blue:#1e6fb5;--gray:#7b8797;--yellow:#e0b02d;--red:#b92229;--orange:#e96b14;--ink:#172437;--line:#dce4ec;--soft:#f5f8fb}
+    *{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;color:var(--ink);background:#f4f7fa}
+    header{background:linear-gradient(135deg,var(--navy),#27618e);color:#fff;padding:18px 20px;position:sticky;top:0;z-index:10;box-shadow:0 3px 12px #0002}
+    h1{margin:0;font-size:20px}header p{margin:5px 0 0;opacity:.9;font-size:12px}.wrap{padding:16px;max-width:1600px;margin:auto}
+    .cards{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:10px;margin-bottom:12px}.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px;box-shadow:0 1px 4px #0000000c}.card b{font-size:22px;display:block}.card span{font-size:11px;color:#5c6a78}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);padding:10px;border-radius:10px;margin-bottom:12px}.toolbar select,.toolbar input,.toolbar button{padding:8px;border:1px solid #cbd6e0;border-radius:7px;background:white}.toolbar input{min-width:240px;flex:1}.toolbar button{cursor:pointer;background:var(--navy);color:#fff;border-color:var(--navy)}
+    .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;margin:8px 0 12px}.dot{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px}.internal{background:var(--gray)}.ready{background:var(--blue)}.warning{background:var(--yellow)}.danger{background:var(--red)}.technical{background:var(--orange)}
+    .table-wrap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 4px #0000000c;max-height:68vh}table{border-collapse:separate;border-spacing:0;min-width:1400px;width:100%}th,td{border-right:1px solid #e5ebf0;border-bottom:1px solid #e5ebf0;padding:7px;font-size:11px;vertical-align:middle}th{background:#27618e;color:#fff;position:sticky;top:0;z-index:4}th:nth-child(1),td:nth-child(1){position:sticky;left:0;z-index:3;background:#eef4f8;font-weight:bold;min-width:105px}th:nth-child(2),td:nth-child(2){position:sticky;left:105px;z-index:3;background:#fff;min-width:245px;font-weight:bold}th:nth-child(1),th:nth-child(2){background:#27618e;color:#fff;z-index:5}.month{min-width:54px;text-align:center}.bar{height:20px;border-radius:5px;color:white;text-align:center;line-height:20px;font-size:12px}.bar.warning{color:#2d2404}.meta{min-width:145px}.gate{min-width:250px}.next{min-width:260px}.clickable{cursor:pointer}.clickable:hover td{background-color:#f5f9fc}
+    .detail{margin-top:12px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;display:none}.detail h2{margin:0 0 8px;color:var(--navy);font-size:17px}.grid{display:grid;grid-template-columns:repeat(2,minmax(240px,1fr));gap:10px}.field{background:var(--soft);border-radius:7px;padding:9px}.field b{display:block;font-size:10px;text-transform:uppercase;color:#657382;margin-bottom:4px}.foot{font-size:11px;color:#637181;margin-top:10px}.empty{padding:30px;text-align:center;color:#687786}
+    @media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.wrap{padding:8px}}
+  </style>
+</head>
+<body>
+<header><h1>🎯 Plan Communication 2027 — Timeline</h1><p>Vue privée en lecture seule · aucune action Gmail, Calendar, publication ou écriture métier</p></header>
+<div class="wrap">
+  <div class="cards" id="cards"></div>
+  <div class="toolbar">
+    <input id="q" type="search" placeholder="Rechercher un axe, une phase, un owner, une gate…" oninput="render()">
+    <select id="phase" onchange="render()"><option value="">Toutes les phases</option></select>
+    <select id="status" onchange="render()"><option value="">Tous les statuts</option></select>
+    <select id="pub" onchange="render()"><option value="">Toutes les autorisations</option></select>
+    <button onclick="loadState()">Actualiser</button>
+    <button onclick="openSheet()">Ouvrir le Sheet</button>
+  </div>
+  <div class="legend"><span><i class="dot internal"></i>Interne</span><span><i class="dot ready"></i>Après validation</span><span><i class="dot warning"></i>Accord/validation requis</span><span><i class="dot danger"></i>NO GO / Bornat</span><span><i class="dot technical"></i>Technique</span></div>
+  <div class="table-wrap"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+  <div class="detail" id="detail"></div>
+  <div class="foot" id="foot"></div>
+</div>
+<script>
+const INITIAL_STATE = <?!= FBR_PLAN_COMM_getTimelineStateJson_() ?>;
+let STATE = INITIAL_STATE;
+
+function cls(pub) {
+  if (pub === 'NON — INTERNE') return 'internal';
+  if (pub === 'OUI APRÈS VALIDATION') return 'ready';
+  if (pub === 'NO GO' || pub === 'BLOQUÉ BORNAT') return 'danger';
+  if (pub === 'BLOQUÉ TECHNIQUE') return 'technical';
+  return 'warning';
+}
+
+function esc(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char];
+  });
+}
+
+function localCounts() {
+  var items = Array.isArray(STATE.items) ? STATE.items : [];
+  return {
+    total: items.length,
+    internal: items.filter(function (x) { return x.publication === 'NON — INTERNE'; }).length,
+    ready: items.filter(function (x) { return x.publication === 'OUI APRÈS VALIDATION'; }).length,
+    nogo: items.filter(function (x) { return x.publication === 'NO GO'; }).length,
+    bornat: items.filter(function (x) { return x.publication === 'BLOQUÉ BORNAT'; }).length,
+    tech: items.filter(function (x) { return x.publication === 'BLOQUÉ TECHNIQUE'; }).length
+  };
+}
+
+function renderCards() {
+  var c = STATE.counts || localCounts();
+  var cards = [
+    ['Axes', c.total],
+    ['Internes', c.internal],
+    ['Après validation', c.readyAfterValidation != null ? c.readyAfterValidation : c.ready],
+    ['NO GO', c.noGo != null ? c.noGo : c.nogo],
+    ['Bloqués Bornat', c.blockedBornat != null ? c.blockedBornat : c.bornat],
+    ['Bloqués techniques', c.blockedTechnical != null ? c.blockedTechnical : c.tech]
+  ];
+  document.getElementById('cards').innerHTML = cards.map(function (x) {
+    return '<div class="card"><b>' + (x[1] || 0) + '</b><span>' + esc(x[0]) + '</span></div>';
+  }).join('');
+}
+
+function fillSelect(id, values) {
+  var el = document.getElementById(id);
+  var current = el.value;
+  Array.prototype.slice.call(el.querySelectorAll('option:not(:first-child)')).forEach(function (option) {
+    option.remove();
+  });
+  Array.from(new Set(values.filter(Boolean))).sort().forEach(function (value) {
+    var option = document.createElement('option');
+    option.value = value;
+    option.textContent = value;
+    el.appendChild(option);
+  });
+  el.value = current;
+}
+
+function filtered() {
+  var items = Array.isArray(STATE.items) ? STATE.items : [];
+  var q = document.getElementById('q').value.toLowerCase();
+  var phase = document.getElementById('phase').value;
+  var status = document.getElementById('status').value;
+  var publication = document.getElementById('pub').value;
+  return items.filter(function (x) {
+    return (!q || JSON.stringify(x).toLowerCase().indexOf(q) !== -1) &&
+      (!phase || x.phase === phase) &&
+      (!status || x.status === status) &&
+      (!publication || x.publication === publication);
+  });
+}
+
+function render() {
+  if (!STATE || !Array.isArray(STATE.items) || !Array.isArray(STATE.months)) {
+    document.getElementById('tbody').innerHTML = '<tr><td colspan="20" class="empty">État Timeline invalide.</td></tr>';
+    document.getElementById('foot').textContent = 'Erreur : état Timeline invalide.';
+    return;
+  }
+
+  renderCards();
+  fillSelect('phase', STATE.items.map(function (x) { return x.phase; }));
+  fillSelect('status', STATE.items.map(function (x) { return x.status; }));
+  fillSelect('pub', STATE.items.map(function (x) { return x.publication; }));
+
+  document.getElementById('thead').innerHTML =
+    '<tr><th>Plan ID</th><th>Axe / campagne</th>' +
+    STATE.months.map(function (month) { return '<th class="month">' + esc(month) + '</th>'; }).join('') +
+    '<th class="meta">Publication</th><th class="meta">Statut</th><th class="meta">Responsable</th><th class="gate">Gate</th><th class="next">Prochaine action</th></tr>';
+
+  var rows = filtered();
+  document.getElementById('tbody').innerHTML = rows.length ? rows.map(function (x) {
+    var months = STATE.months.map(function (_, index) {
+      var active = index >= Number(x.start) && index <= Number(x.end);
+      return '<td class="month">' + (active ? '<div class="bar ' + cls(x.publication) + '">■</div>' : '') + '</td>';
+    }).join('');
+    return '<tr class="clickable" data-plan-id="' + esc(x.id) + '">' +
+      '<td>' + esc(x.id) + '</td><td>' + esc(x.axis) + '</td>' + months +
+      '<td>' + esc(x.publication) + '</td><td>' + esc(x.status) + '</td><td>' + esc(x.owner) + '</td><td>' + esc(x.gate) + '</td><td>' + esc(x.next) + '</td></tr>';
+  }).join('') : '<tr><td colspan="20" class="empty">Aucun axe ne correspond aux filtres.</td></tr>';
+
+  Array.prototype.slice.call(document.querySelectorAll('tr[data-plan-id]')).forEach(function (row) {
+    row.addEventListener('click', function () { showDetail(row.getAttribute('data-plan-id')); });
+  });
+
+  document.getElementById('foot').textContent = rows.length + ' axe(s) affiché(s) · version ' +
+    (STATE.version || 'inconnue') + ' · mode ' + (STATE.mode || 'lecture seule');
+}
+
+function showDetail(id) {
+  var item = STATE.items.find(function (x) { return x.id === id; });
+  if (!item) return;
+  var detail = document.getElementById('detail');
+  var fields = [
+    ['Phase', item.phase], ['Période', item.period], ['Objectif', item.objective],
+    ['Public', item.audience], ['Message central', item.message], ['Canaux', item.channels],
+    ['Livrables', item.deliverables], ['KPI', item.kpi], ['Source CDC', item.source],
+    ['Gate', item.gate], ['Publication', item.publication], ['Prochaine action', item.next]
+  ];
+  detail.style.display = 'block';
+  detail.innerHTML = '<h2>' + esc(item.id) + ' — ' + esc(item.axis) + '</h2><div class="grid">' +
+    fields.map(function (field) {
+      return '<div class="field"><b>' + esc(field[0]) + '</b>' + esc(field[1]) + '</div>';
+    }).join('') + '</div>';
+  detail.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function openSheet() {
+  window.open(STATE.spreadsheetUrl, '_blank');
+}
+
+function loadState() {
+  // The template injects a live state before the dialog appears, so axes render immediately.
+  render();
+  if (!(window.google && google.script && google.script.run)) return;
+
+  google.script.run
+    .withSuccessHandler(function (state) {
+      STATE = state;
+      render();
+    })
+    .withFailureHandler(function (error) {
+      console.error(error);
+      document.getElementById('foot').textContent =
+        'Actualisation serveur impossible : ' + esc(error && error.message ? error.message : error) +
+        ' · les données initiales restent affichées.';
+    })
+    .FELIBREE_getPlanCommunicationTimelineState();
+}
+
+loadState();
+</script>
+</body></html>

@@ -50,6 +50,8 @@ function FBR_onOpen(e) {
     .addItem('📆 Publications vers calendrier — APPLY protégé', 'FELIBREE_syncCalendarApply')
 
     .addSeparator()
+    .addItem('🧭 Menu — statut déclencheur ouverture', 'FELIBREE_menuOpenTriggerStatus')
+    .addItem('🧭 Menu — installer/réparer déclencheur', 'FELIBREE_installMenuOpenTrigger')
     .addItem('⏱️ Installer triggers', 'FELIBREE_installTriggers')
     .addItem('🛑 Supprimer triggers', 'FELIBREE_removeTriggers')
 

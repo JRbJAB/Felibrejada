@@ -1,4 +1,4 @@
-var FELIBREE_SCRIPT_VERSION = 'felibree-strict-ui-automation-v0.6.1-github-empty-repo-fix-20260708';
+var FELIBREE_SCRIPT_VERSION = 'felibree-strict-ui-automation-v0.6.3-plan-comm-html-state-bridge-20260711';
 
 var FBR = {
   SHEETS: {
@@ -45,6 +45,7 @@ var FBR = {
     GITHUB_COMMITTER_NAME: 'FELIBREE_GITHUB_COMMITTER_NAME',
     GITHUB_COMMITTER_EMAIL: 'FELIBREE_GITHUB_COMMITTER_EMAIL'
   },
+  MENU_OPEN_TRIGGER_HANDLER: 'FELIBREE_menuOpenInstallable',
   TRIGGER_HANDLERS: [
     'FELIBREE_triggerDailyRefresh',
     'FELIBREE_triggerWeeklyReview'

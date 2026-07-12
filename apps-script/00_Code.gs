@@ -60,12 +60,28 @@ function FELIBREE_openPlanCommunicationTimeline() {
   return FBR_PLAN_COMM_showTimelineDialog_();
 }
 
+function FELIBREE_getPlanCommunicationTimelineState() {
+  return FBR_PLAN_COMM_getTimelineState_();
+}
+
 function FELIBREE_planCommunicationTimelineDryRun() {
   return FBR_PLAN_COMM_uiStrictDryRun_();
 }
 
 function FELIBREE_planCommunicationTimelineApply() {
   return FBR_PLAN_COMM_uiStrictApply_();
+}
+
+function FELIBREE_menuOpenInstallable(e) {
+  return FBR_onOpen(e);
+}
+
+function FELIBREE_installMenuOpenTrigger() {
+  return FBR_installMenuOpenTrigger_();
+}
+
+function FELIBREE_menuOpenTriggerStatus() {
+  return FBR_menuOpenTriggerStatus_();
 }
 
 function FELIBREE_refreshCockpit() {

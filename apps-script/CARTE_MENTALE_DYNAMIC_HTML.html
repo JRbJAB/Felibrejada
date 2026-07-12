@@ -1,0 +1,130 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base target="_top">
+  <meta name="fbr-access-profile" content="ADMIN_INTERNE,COM_INTERNE">
+  <meta name="fbr-publication-status" content="INTERNE_NON_PUBLIC">
+  <meta name="fbr-resource-mode" content="HTML_SVG_DYNAMIC_VALIDATED_DATA">
+  <meta name="fbr-project" content="Felibrejada dins Brantome en Perigor">
+  <meta name="fbr-version" content="v1.0.0-dynamic">
+  <style>
+    :root{
+      --bg1:#18254a; --bg2:#0f1933; --gold:#f0c75e; --cyan:#43b8c7;
+      --cream:#fff6df; --white:#fff; --red:#b94343; --green:#2f8d5b;
+      --purple:#4b2d6e; --ink:#172033;
+    }
+    html,body{margin:0;height:100%;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(135deg,var(--bg1),var(--bg2));color:var(--white);}
+    .toolbar{position:fixed;top:10px;left:10px;right:10px;display:flex;gap:8px;z-index:10;align-items:center}
+    button{border:0;border-radius:999px;background:var(--gold);color:#2b2200;font-weight:700;padding:9px 14px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+    .stamp{margin-left:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:8px 12px;color:#d9eeff;font-size:12px}
+    #wrap{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;padding:52px 14px 14px;box-sizing:border-box}
+    svg{width:100%;height:100%;max-height:820px;filter:drop-shadow(0 14px 30px rgba(0,0,0,.35))}
+    .title{font-weight:800;letter-spacing:.3px}
+    .small{font-size:13px;fill:#d8ebff}
+    .nodeTitle{font-size:19px;font-weight:800;fill:#fff}
+    .nodeText{font-size:12px;fill:#ecf6ff}
+    .badge{font-size:11px;font-weight:800;fill:#1a243b}
+    .warning{position:fixed;left:14px;bottom:12px;right:14px;background:rgba(255,246,223,.95);color:#422b00;border-radius:14px;padding:10px 14px;font-size:12px;box-shadow:0 4px 20px rgba(0,0,0,.25)}
+    @media print{
+      @page{size:A3 landscape;margin:7mm}
+      .toolbar,.warning{display:none}
+      #wrap{padding:0;background:white}
+      body{background:white}
+      svg{max-height:none;filter:none}
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button onclick="window.print()">🖨️ Imprimer / PDF</button>
+    <button onclick="downloadSvg()">⬇️ Télécharger SVG</button>
+    <div class="stamp" id="stamp"></div>
+  </div>
+  <div id="wrap">
+    <svg id="map" viewBox="0 0 1600 950" role="img" aria-label="Carte mentale communication Félibrée 2027"></svg>
+  </div>
+  <div class="warning" id="warnings"></div>
+
+<script>
+var STATE = <?!= stateJson ?>;
+
+function esc(s){return String(s == null ? '' : s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];});}
+function splitText(text, max){var words=String(text||'').split(/\s+/), lines=[], cur=''; for(var i=0;i<words.length;i++){var n=cur?cur+' '+words[i]:words[i]; if(n.length>max){if(cur)lines.push(cur); cur=words[i];}else cur=n;} if(cur)lines.push(cur); return lines.slice(0,3);}
+function statusColor(status){status=String(status||''); if(status.indexOf('VALID')!==-1||status==='GO'||status==='OK')return '#2f8d5b'; if(status.indexOf('NO GO')!==-1||status.indexOf('BLOQU')!==-1)return '#b94343'; if(status.indexOf('P0')!==-1)return '#e98b39'; return '#f0c75e';}
+function polar(cx,cy,r,deg){var a=(deg-90)*Math.PI/180;return {x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)};}
+function add(tag, attrs, parent){var el=document.createElementNS('http://www.w3.org/2000/svg',tag); for(var k in attrs)el.setAttribute(k,attrs[k]); (parent||document.getElementById('map')).appendChild(el); return el;}
+function text(x,y,content,cls,anchor){var t=add('text',{x:x,y:y,'text-anchor':anchor||'middle','class':cls||''}); t.innerHTML=esc(content); return t;}
+function pill(x,y,w,h,fill){add('rect',{x:x-w/2,y:y-h/2,width:w,height:h,rx:24,fill:fill,stroke:'rgba(255,255,255,.45)','stroke-width':1.4});}
+function render(){
+  var svg=document.getElementById('map'); svg.innerHTML='';
+  add('rect',{x:0,y:0,width:1600,height:950,fill:'url(#bg)'});
+  var defs=add('defs',{});
+  var lg=add('linearGradient',{id:'bg',x1:0,y1:0,x2:1,y2:1},defs);
+  add('stop',{offset:'0%','stop-color':'#1f3464'},lg); add('stop',{offset:'100%','stop-color':'#0d1530'},lg);
+  var glow=add('radialGradient',{id:'glow',cx:'50%',cy:'50%',r:'50%'},defs);
+  add('stop',{offset:'0%','stop-color':'#fff6df','stop-opacity':'1'},glow); add('stop',{offset:'100%','stop-color':'#f0c75e','stop-opacity':'.1'},glow);
+
+  text(800,60,STATE.title,'title', 'middle').setAttribute('font-size','34');
+  text(800,88,STATE.subtitle,'small','middle');
+  text(800,112,'Version '+STATE.version+' — '+STATE.generatedAt,'small','middle');
+
+  var cx=800, cy=480;
+  add('circle',{cx:cx,cy:cy,r:120,fill:'url(#glow)',stroke:'#f0c75e','stroke-width':4});
+  if(STATE.logo && STATE.logo.valid && STATE.logo.dataUri){
+    add('image',{x:cx-72,y:cy-72,width:144,height:144,href:STATE.logo.dataUri});
+  } else {
+    text(cx,cy-18,'Blau','title','middle').setAttribute('font-size','38');
+    text(cx,cy+22,'Périgord','title','middle').setAttribute('font-size','38');
+    text(cx,cy+54,'logo officiel à intégrer','small','middle');
+  }
+
+  var stats=[
+    'Décisions validées: '+STATE.stats.validatedDecisions,
+    'Décisions à traiter: '+STATE.stats.pendingDecisions,
+    'Gates NO GO: '+STATE.stats.gatesNoGo,
+    'Actions P0 ouvertes: '+STATE.stats.p0ActionsOpen
+  ];
+  for(var s=0;s<stats.length;s++){text(800,640+s*20,stats[s],'small','middle');}
+
+  var blocks=STATE.blocks||[];
+  for(var i=0;i<blocks.length;i++){
+    var angle=360/blocks.length*i;
+    var p=polar(cx,cy,330,angle);
+    var w=260,h=138;
+    add('line',{x1:cx,y1:cy,x2:p.x,y2:p.y,stroke:'rgba(240,199,94,.65)','stroke-width':3});
+    add('rect',{x:p.x-w/2,y:p.y-h/2,width:w,height:h,rx:22,fill:'rgba(255,255,255,.12)',stroke:'#43b8c7','stroke-width':2});
+    text(p.x-w/2+18,p.y-h/2+30,blocks[i].icon+' '+blocks[i].title,'nodeTitle','start');
+    var status=blocks[i].status||'';
+    pill(p.x+w/2-62,p.y-h/2+27,92,24,statusColor(status));
+    text(p.x+w/2-62,p.y-h/2+31,status,'badge','middle');
+
+    var y=p.y-h/2+56;
+    var items=blocks[i].items||[];
+    for(var j=0;j<items.length && j<3;j++){
+      var lines=splitText(items[j],34);
+      for(var k=0;k<lines.length;k++){
+        text(p.x-w/2+20,y, (k===0?'• ':'  ')+lines[k], 'nodeText','start');
+        y+=15;
+      }
+      y+=2;
+    }
+  }
+
+  var warn=(STATE.warnings||[]).join(' · ');
+  document.getElementById('warnings').textContent = warn ? '⚠️ '+warn : '✅ Aucune alerte majeure détectée.';
+  document.getElementById('stamp').textContent = 'Interne — ADMIN/COM — données validées uniquement';
+}
+function downloadSvg(){
+  var svg=document.getElementById('map').outerHTML;
+  var blob=new Blob([svg],{type:'image/svg+xml'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='carte_mentale_COM_2027_dynamic.svg';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+render();
+</script>
+</body>
+</html>
