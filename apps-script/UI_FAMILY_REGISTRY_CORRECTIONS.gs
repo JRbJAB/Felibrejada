@@ -622,3 +622,344 @@ function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_log_(ss, eventName, status, notes) {
     'UI rules applied to registry/corrections family.'
   ]);
 }
+
+
+
+/**
+ * ---------------------------------------------------------------------------
+ * v0.1.3 FULL-REFERENCE OVERRIDES — 2026-07-12
+ * ---------------------------------------------------------------------------
+ * Source obligatoire : fichier complet fourni / sauvegarde live complète.
+ * Cette section NE repart PAS d’un fragment : elle surcharge les fonctions
+ * à risque de la v0.1.2 tout en conservant le fichier complet.
+ *
+ * Objectifs :
+ * - conserver A:AB = schéma technique compatible 33_ScriptRegistryIntegrity.gs
+ * - ajouter AC:AK = cockpit humain / audit UI, sans casser 33
+ * - convertir toutes les validations en WARNING ONLY (setAllowInvalid(true))
+ * - cacher 🧩 UI Scripts Audit
+ * - trier 🧩 Script Registry par Fichier script
+ * - éviter les cellules "non valide" bloquantes
+ */
+
+FBR_UI_REGISTRY_CORRECTIONS_VERSION = 'v0.1.3';
+FBR_UI_REGISTRY_CORRECTIONS_TRACE = 'UI_FAMILY_REGISTRY_CORRECTIONS_04_FULL_REFERENCE_COMPAT_33';
+
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_desiredRegistryHeaders_() {
+  return [
+    // A:AB — NE PAS CHANGER : contrat technique 33_ScriptRegistryIntegrity.gs
+    'Fichier script',
+    'Fonction publique / interne',
+    'Type',
+    'Menu / appel',
+    'Domaine',
+    'Statut',
+    'Criticité',
+    'Write action',
+    'Dépendances',
+    'Scope requis',
+    'Dernier backup',
+    'GitHub path',
+    'Owner',
+    'Action suivante',
+    'Notes',
+    'Version',
+    'Trace',
+    'Famille / rôle',
+    'Live present',
+    'Live SHA256',
+    'Backup SHA256',
+    'Drift status',
+    'Registry alert',
+    'Last checked',
+    'Latest backup',
+    'Missing in live',
+    'Missing in backup',
+    'Diff summary',
+    // AC:AK — cockpit humain / audit UI, hors contrat 33
+    'Présent menu',
+    'Présent sidebar',
+    'Wrapper public',
+    'Mode MAJ',
+    'Vue cockpit',
+    'Audit UI source',
+    'Décision UI',
+    'Risque UI',
+    'Remplacé par / cible'
+  ];
+}
+
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_rebuildScriptRegistryEssential_(sh) {
+  // v0.1.3 : on reconstruit depuis le contenu existant complet, en conservant A:AB compatible 33.
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_clearValidationsSafe_(sh);
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_clearConditionalFormatsSafe_(sh);
+
+  var oldLastRow = Math.max(sh.getLastRow(), 4);
+  var oldLastCol = Math.max(sh.getLastColumn(), 37);
+  var oldValues = sh.getRange(1, 1, oldLastRow, oldLastCol).getDisplayValues();
+  var oldHeaders = oldValues.length >= 4 ? oldValues[3] : [];
+  var hmap = FBR_UI_FAMILY_REGISTRY_CORRECTIONS_headerMap_(oldHeaders);
+  var desired = FBR_UI_FAMILY_REGISTRY_CORRECTIONS_desiredRegistryHeaders_();
+  var rows = [];
+
+  for (var r = 4; r < oldValues.length; r++) {
+    var row = oldValues[r];
+    var file = FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Fichier script']);
+    if (!file) continue;
+    if (String(file).indexOf('SECTION') === 0) continue;
+
+    var out = [];
+    for (var c = 0; c < desired.length; c++) out.push('');
+
+    var status = FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Statut']) || 'À qualifier';
+    var isNonLive = String(status).indexOf('NON LIVE') >= 0 || String(status).indexOf('Planifié') >= 0 || String(file).indexOf('20_') === 0 || String(file).indexOf('21_') === 0 || String(file).indexOf('22_') === 0 || String(file).indexOf('23_') === 0 || String(file).indexOf('24_') === 0 || String(file).indexOf('25_') === 0 || String(file).indexOf('26_') === 0 || String(file).indexOf('34_') === 0;
+    var family = FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Famille / rôle']) || FBR_UI_FAMILY_REGISTRY_CORRECTIONS_guessFamily_(file, row, hmap);
+    var live = FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Live present']) || (isNonLive ? 'NO' : 'YES');
+    var drift = FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Drift status']) || (isNonLive ? 'NOT_INSTALLED_EXPECTED' : 'À recalculer');
+    var alert = FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Registry alert']) || (isNonLive ? '⚪ NON LIVE' : '🟠 À vérifier');
+
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Fichier script', file);
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Fonction publique / interne', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Fonction publique / interne', 'Fonction principale']) || FBR_UI_FAMILY_REGISTRY_CORRECTIONS_guessFunction_(file));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Type', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Type']) || FBR_UI_FAMILY_REGISTRY_CORRECTIONS_guessType_(file));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Menu / appel', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Menu / appel']) || FBR_UI_FAMILY_REGISTRY_CORRECTIONS_guessMenuCall_(file));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Domaine', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Domaine', 'Onglets touchés']) || family);
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Statut', status);
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Criticité', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Criticité']) || (isNonLive ? 'P1' : 'P0'));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Write action', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Write action']) || (isNonLive ? 'Non' : 'À vérifier'));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Dépendances', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Dépendances']));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Scope requis', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Scope requis']));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Dernier backup', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Dernier backup']) || (isNonLive ? 'À venir' : 'e74f0caf'));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'GitHub path', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['GitHub path']) || FBR_UI_FAMILY_REGISTRY_CORRECTIONS_guessGithubPath_(file));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Owner', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Owner']) || 'JRbIA');
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Action suivante', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Action suivante']) || (isNonLive ? 'Classer / installer après validation.' : 'Vérifier après backup.'));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Notes', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Notes']));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Version', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Version']) || (isNonLive ? 'vNext' : 'v0.7.3-live'));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Trace', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Trace']) || (isNonLive ? 'PLANNED' : 'e74f0caf'));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Famille / rôle', family);
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Live present', live);
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Live SHA256', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Live SHA256']));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Backup SHA256', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Backup SHA256']));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Drift status', drift);
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Registry alert', alert);
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Last checked', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Last checked']));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Latest backup', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Latest backup']));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Missing in live', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Missing in live']) || (isNonLive ? 'YES' : 'NO'));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Missing in backup', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Missing in backup']) || (isNonLive ? 'YES' : 'NO'));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Diff summary', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Diff summary']));
+
+    // Cockpit humain / audit UI
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Présent menu', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Présent menu']) || FBR_UI_FAMILY_REGISTRY_CORRECTIONS_guessMenu_(file));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Présent sidebar', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Présent sidebar']) || FBR_UI_FAMILY_REGISTRY_CORRECTIONS_guessSidebar_(file));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Wrapper public', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Wrapper public']) || FBR_UI_FAMILY_REGISTRY_CORRECTIONS_guessWrapper_(file, row, hmap));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Mode MAJ', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Mode MAJ']) || FBR_UI_FAMILY_REGISTRY_CORRECTIONS_guessModeMaj_(file));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Vue cockpit', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Vue cockpit']) || FBR_UI_FAMILY_REGISTRY_CORRECTIONS_guessCockpitView_(file, family));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Audit UI source', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Audit UI source']) || FBR_UI_FAMILY_REGISTRY_CORRECTIONS_guessAuditSource_(file));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Décision UI', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Décision UI']) || (isNonLive ? 'À classer' : 'Garder'));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Risque UI', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Risque UI']));
+    FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setByDesired_(out, desired, 'Remplacé par / cible', FBR_UI_FAMILY_REGISTRY_CORRECTIONS_readByHeader_(row, hmap, ['Remplacé par / cible']));
+
+    rows.push(out);
+  }
+
+  rows = FBR_UI_FAMILY_REGISTRY_CORRECTIONS_dedupeRows_(rows, 0);
+  rows.sort(function(a, b) {
+    return String(a[0]).toLowerCase().localeCompare(String(b[0]).toLowerCase());
+  });
+
+  var title = '🧩 Script Registry — cockpit scripts live / planifiés';
+  var notice = 'A:AB = source technique compatible 33_ScriptRegistryIntegrity.gs. AC:AK = cockpit humain / audit UI. UI Scripts Audit caché.';
+  var meta = ['Dernière mise à jour', Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd'), 'Statut', 'v0.1.3 depuis script complet de référence', 'Baseline', 'FULL_REFERENCE', 'Règle', 'Aucune validation bloquante'];
+
+  sh.clear();
+  sh.getRange(1, 1).setValue(title);
+  sh.getRange(2, 1).setValue(notice);
+  sh.getRange(3, 1, 1, meta.length).setValues([meta]);
+  sh.getRange(4, 1, 1, desired.length).setValues([desired]);
+  if (rows.length) sh.getRange(5, 1, rows.length, desired.length).setValues(rows);
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_resizeRows_(sh, rows.length + 4, desired.length);
+}
+
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_formatScriptRegistry_(ss, sh) {
+  sh.setFrozenRows(4);
+  sh.setFrozenColumns(2);
+  sh.setHiddenGridlines(true);
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_compactWidths_(sh, [
+    260, 230, 135, 190, 150, 155, 80, 155, 210, 210, 150, 255, 95, 220, 300, 115, 150, 150,
+    95, 160, 160, 150, 155, 120, 230, 110, 120, 280, 120, 120, 120, 135, 135, 150, 170, 230, 230
+  ]);
+
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_applyClosedList_(sh, 'F5:F500', ['Actif live', 'Actif live protégé', 'Planifié - NON LIVE', 'Actif', 'Planifié', 'À produire', 'PATCH PRÊT', 'PATCH PRÊT — NON LIVE', 'Auto-discovered live', 'Archivé', 'APPLIQUÉ SHEET LIVE']);
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_applyClosedList_(sh, 'G5:G500', ['P0', 'P1', 'P2', 'P3']);
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_applyClosedList_(sh, 'S5:S500', ['YES', 'NO', 'N/A', 'À recalculer']);
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_applyClosedList_(sh, 'V5:V500', ['OK_SAME_HASH', 'HASH_MISMATCH', 'LIVE_NOT_IN_REGISTRY', 'NOT_INSTALLED_EXPECTED', 'NOT_COMPARABLE', 'NON_LIVE_PATCH', 'À recalculer']);
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_applyClosedList_(sh, 'W5:W500', ['🟢 OK', '🟢 OK AUTO', '🟠 À vérifier', '🟠 DRIFT AUTO', '🔴 DRIFT', '🔴 DRIFT P0', '⚪ NON LIVE', '⚪ N/A', '🟡 INSTALLATION REQUISE']);
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_applyClosedList_(sh, 'AC5:AC500', ['OUI', 'OUI - source menu', 'OUI - wrappers', 'OUI - via menu', 'OUI - aide', 'NON', 'FUTUR', 'À vérifier', 'N/A']);
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_applyClosedList_(sh, 'AD5:AD500', ['OUI', 'OUI HTML', 'OUI - HTML sidebar', 'OUI - aide/sidebar', 'OUI - carte IA', 'NON', 'À vérifier', 'N/A']);
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_applyClosedList_(sh, 'AE5:AE500', ['OUI', 'NON', 'À vérifier', 'À créer', 'N/A']);
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_applyClosedList_(sh, 'AF5:AF500', ['Entrypoint', 'Menu', 'Web app', 'Vue privée', 'Script contrôlé', 'Backup / gate', 'IA staging', 'UI famille', 'UI timeline', 'UI carte', 'Aide', 'Manifest', 'Planifié']);
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_applyClosedList_(sh, 'AG5:AG500', ['Core', 'Live / métier', 'Backup / registry', 'IA', 'UI familles', 'Plan communication', 'Carte mentale', 'Aide', 'Technique', 'Data / QA futur']);
+
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_colorReadOnly_(sh, 'A5:E500');
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_colorEditable_(sh, 'F5:H500');
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_colorReadOnly_(sh, 'I5:AB500');
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_colorEditable_(sh, 'AC5:AK500');
+
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_condPriority_(sh, 'G5:G500');
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_condRegistryAlert_(sh, 'W5:W500');
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_condLivePresent_(sh, 'S5:S500');
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_condDrift_(sh, 'V5:V500');
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_sortRegistry_(sh);
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_hideUiScriptsAudit_(ss);
+}
+
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_applyClosedList_(sh, a1, values) {
+  // v0.1.3 : warning-only. Ne doit jamais bloquer 33_ScriptRegistryIntegrity.gs.
+  var rule = SpreadsheetApp.newDataValidation().requireValueInList(values, true).setAllowInvalid(true).build();
+  sh.getRange(a1).setDataValidation(rule);
+}
+
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_applyConnectedList_(ss, sh, a1, kind) {
+  var range = FBR_UI_FAMILY_REGISTRY_CORRECTIONS_refRange_(ss, kind);
+  if (!range) return;
+  var rule = SpreadsheetApp.newDataValidation().requireValueInRange(range, true).setAllowInvalid(true).build();
+  sh.getRange(a1).setDataValidation(rule);
+}
+
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_formatUiScriptsAudit_(ss, sh) {
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_compactWidths_(sh, [160, 260, 140, 220, 150, 150, 240, 90, 70, 220, 240, 220, 320, 180]);
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_applyClosedList_(sh, 'H5:H220', ['Non', 'Oui, après archive', 'Parking']);
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_applyClosedList_(sh, 'I5:I220', ['P0', 'P1', 'P2', 'P3']);
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_colorReadOnly_(sh, 'A5:D220');
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_colorEditable_(sh, 'E5:K220');
+  FBR_UI_FAMILY_REGISTRY_CORRECTIONS_condPriority_(sh, 'I5:I220');
+  try { sh.hideSheet(); } catch (err) { Logger.log('hide UI audit skipped: ' + err); }
+}
+
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_auditInvalidChoices_(ss, sh, kind, lastRow) {
+  // Warning-only audit : remonte les anomalies mais ne les bloque pas.
+  var checks = [];
+  if (kind === 'script_registry') {
+    checks.push({a1:'F5:F' + lastRow, values:['Actif live','Actif live protégé','Planifié - NON LIVE','Actif','Planifié','À produire','PATCH PRÊT','PATCH PRÊT — NON LIVE','Auto-discovered live','Archivé','APPLIQUÉ SHEET LIVE'], name:'Statut'});
+    checks.push({a1:'G5:G' + lastRow, values:['P0','P1','P2','P3'], name:'Criticité'});
+    checks.push({a1:'S5:S' + lastRow, values:['YES','NO','N/A','À recalculer'], name:'Live present'});
+  } else if (kind === 'controles') {
+    checks.push({a1:'C5:C' + lastRow, values:['INFO','DÉCISION','ATTENTION','BLOQUANT','ERREUR'], name:'Niveau'});
+    checks.push({a1:'I5:I' + lastRow, values:['Ouvert','À faire','En cours','Corrigé','Validé','Refusé','Archivé'], name:'Statut'});
+    checks.push({a1:'L5:L' + lastRow, values:['Manuel','Script lié','Automatique lié','Historique'], name:'Mode alimentation'});
+  } else if (kind === 'qa_rules') {
+    checks.push({a1:'F5:F' + lastRow, values:['Info','Alerte','Erreur','Bloquant'], name:'Niveau'});
+    checks.push({a1:'H5:H' + lastRow, values:['Actif','À créer','Archivé','À revoir'], name:'Statut'});
+  }
+  var bad = [];
+  for (var i = 0; i < checks.length; i++) {
+    var c = checks[i];
+    var vals = sh.getRange(c.a1).getDisplayValues();
+    for (var r = 0; r < vals.length; r++) {
+      var v = String(vals[r][0] || '').trim();
+      if (!v) continue;
+      if (c.values.indexOf(v) < 0) bad.push(c.name + ' row ' + (5 + r) + ': ' + v);
+    }
+  }
+  return bad.slice(0, 50);
+}
+
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_sortRegistry_(sh) {
+  var lastRow = Math.max(sh.getLastRow(), 4);
+  var lastCol = Math.max(sh.getLastColumn(), 37);
+  if (lastRow > 5) {
+    sh.getRange(5, 1, lastRow - 4, lastCol).sort([{column: 1, ascending: true}]);
+  }
+}
+
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_resizeRows_(sh, usedRows, usedCols) {
+  try {
+    var targetRows = Math.max(usedRows, 55);
+    if (sh.getMaxRows() > targetRows) sh.deleteRows(targetRows + 1, sh.getMaxRows() - targetRows);
+    if (sh.getMaxRows() < targetRows) sh.insertRowsAfter(sh.getMaxRows(), targetRows - sh.getMaxRows());
+    var targetCols = Math.max(usedCols, 37);
+    if (sh.getMaxColumns() < targetCols) sh.insertColumnsAfter(sh.getMaxColumns(), targetCols - sh.getMaxColumns());
+  } catch (err) {
+    Logger.log('resize skipped for ' + sh.getName() + ': ' + err);
+  }
+}
+
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_hideUiScriptsAudit_(ss) {
+  try {
+    var cfg = FBR_UI_FAMILY_REGISTRY_CORRECTIONS_cfg_();
+    var sh = ss.getSheetByName(cfg.UI_SCRIPTS_AUDIT);
+    if (sh) sh.hideSheet();
+  } catch (err) {
+    Logger.log('hide audit skipped: ' + err);
+  }
+}
+
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_condLivePresent_(sh, a1) {
+  var range = sh.getRange(a1);
+  var rules = sh.getConditionalFormatRules();
+  rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo('YES').setBackground('#DFF2BF').setFontColor('#1F5E20').setBold(true).setRanges([range]).build());
+  rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo('NO').setBackground('#F3F4F6').setFontColor('#555555').setBold(true).setRanges([range]).build());
+  sh.setConditionalFormatRules(rules);
+}
+
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_condDrift_(sh, a1) {
+  var range = sh.getRange(a1);
+  var rules = sh.getConditionalFormatRules();
+  rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains('OK').setBackground('#DFF2BF').setFontColor('#1F5E20').setBold(true).setRanges([range]).build());
+  rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains('MISMATCH').setBackground('#F8D7DA').setFontColor('#842029').setBold(true).setRanges([range]).build());
+  rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains('LIVE_NOT').setBackground('#FFE0B2').setFontColor('#6B3A00').setBold(true).setRanges([range]).build());
+  rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains('NOT_INSTALLED').setBackground('#F3F4F6').setFontColor('#555555').setBold(true).setRanges([range]).build());
+  sh.setConditionalFormatRules(rules);
+}
+
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_guessFunction_(file) {
+  var f = String(file || '');
+  if (f === 'appsscript.json') return 'Scopes et runtime';
+  if (f.indexOf('.html') >= 0) return 'HTML / vue privée';
+  if (f.indexOf('RegistryIntegrity') >= 0) return 'FELIBREE_registryVerifyLiveVsBackupApply';
+  if (f.indexOf('GitHub') >= 0) return 'Backup Drive + GitHub';
+  if (f.indexOf('SourceBackup') >= 0) return 'Backup source Drive';
+  return 'À classifier';
+}
+
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_guessType_(file) {
+  var f = String(file || '');
+  if (f === 'appsscript.json') return 'Manifest';
+  if (f.indexOf('.html') >= 0) return 'HTML';
+  if (f.indexOf('UI') >= 0) return 'UI';
+  if (f.indexOf('Gemini') >= 0) return 'IA';
+  return 'Script';
+}
+
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_guessMenuCall_(file) {
+  var f = String(file || '');
+  if (f === 'appsscript.json') return 'Interne';
+  if (f.indexOf('.html') >= 0) return 'Vue privée';
+  if (f.indexOf('Menu') >= 0 || f.indexOf('UI') >= 0) return 'Menu / UI';
+  return 'Registry gate';
+}
+
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_guessGithubPath_(file) {
+  if (!file) return '';
+  if (String(file) === 'appsscript.json') return 'appsscript.json';
+  return 'apps-script/' + String(file);
+}
+
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_guessCockpitView_(file, family) {
+  var f = String(file || '');
+  var fam = String(family || '');
+  if (f.indexOf('Gemini') >= 0 || f.indexOf('IaStaging') >= 0) return 'IA';
+  if (f.indexOf('AIDE') >= 0 || f.indexOf('Aide') >= 0) return 'Aide';
+  if (f.indexOf('PLAN_COMM') >= 0) return 'Plan communication';
+  if (f.indexOf('CARTE') >= 0 || f.indexOf('carte_mentale') >= 0) return 'Carte mentale';
+  if (fam.indexOf('Backup') >= 0 || f.indexOf('RegistryIntegrity') >= 0) return 'Backup / registry';
+  if (f.indexOf('20_') === 0 || f.indexOf('21_') === 0 || f.indexOf('22_') === 0 || f.indexOf('23_') === 0 || f.indexOf('24_') === 0 || f.indexOf('25_') === 0 || f.indexOf('26_') === 0 || f.indexOf('34_') === 0) return 'Data / QA futur';
+  return 'Live / métier';
+}
+
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_guessAuditSource_(file) {
+  var f = String(file || '');
+  if (f.indexOf('UI_FAMILY') >= 0 || f.indexOf('AIDE') >= 0 || f.indexOf('PLAN_COMM') >= 0 || f.indexOf('CARTE') >= 0) return 'UI Audit';
+  if (f === 'appsscript.json') return 'Manifest';
+  if (f.indexOf('RegistryIntegrity') >= 0) return 'Gate registry';
+  return 'Registry';
+}
