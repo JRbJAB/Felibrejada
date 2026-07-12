@@ -1,3 +1,16 @@
+/**
+ * 🎉 Félibrée 2027 — Menu et routage sidebar (fichier live complet)
+ * Fichier : 03_Menu_UI.gs
+ * Version patch : v0.4.0-menu-sidebar-safe-current-20260712
+ * Baseline : backup live 874dd14a / GitHub 551334e93bf0221954b31d50da4b2b50fec35605
+ *
+ * Règles :
+ * - conserve l'unique FBR_onOpen existant ; aucun nouvel onOpen / doGet / menu maître ;
+ * - conserve Plan Communication et les fonctions de réparation du déclencheur menu ;
+ * - corrige les routes carte mentale vers les fonctions publiques v1.4 CLEAN ;
+ * - garde les anciennes clés d'action V1 uniquement comme alias de compatibilité.
+ */
+
 function FBR_onOpen(e) {
   var ui = SpreadsheetApp.getUi();
 
@@ -177,11 +190,14 @@ function FBR_sidebarAction_(action) {
     case 'open-carte-mentale-com-fullscreen':
       return FELIBREE_openCarteMentaleComFullscreen();
 
+    // Route propre actuelle + alias legacy conservé pour compatibilité.
+    case 'carte-mentale-com-diagnostic':
     case 'carte-mentale-com-v1-diagnostic':
-      return FELIBREE_carteMentaleComV1Diagnostic();
+      return FELIBREE_carteMentaleComDiagnostic();
 
+    case 'carte-mentale-com-dry-run':
     case 'carte-mentale-com-v1-dry-run':
-      return FELIBREE_refreshCarteMentaleComV1DryRun();
+      return FELIBREE_refreshCarteMentaleComDryRun();
 
     case 'open-admin-web':
       return FBR_showAdminWebDialog_();
