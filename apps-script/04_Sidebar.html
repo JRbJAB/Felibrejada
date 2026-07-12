@@ -3,104 +3,129 @@
 <head>
   <base target="_top">
   <style>
-    body { font-family: Arial, sans-serif; margin: 16px; color: #1f1f1f; }
-    h1 { font-size: 18px; margin: 0 0 4px; }
-    .muted { color: #666; font-size: 12px; }
-    .card { border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin: 12px 0; background: #fafafa; }
-    button { width: 100%; margin: 5px 0; padding: 10px; border: 0; border-radius: 8px; cursor: pointer; font-weight: 700; }
+    body { font-family: Arial, sans-serif; margin: 14px; color: #1f1f1f; background: #f6f7fb; }
+    h1 { font-size: 18px; margin: 0 0 4px; color: #2d1739; }
+    .muted { color: #666; font-size: 12px; line-height: 1.35; }
+    .state { border: 1px solid #ddd; border-radius: 10px; padding: 10px; margin: 10px 0 12px; background: #fff; }
+    details { border: 1px solid #ddd; border-radius: 10px; margin: 9px 0; background: #fff; overflow: hidden; }
+    summary { cursor: pointer; padding: 11px 12px; font-weight: 800; color: #2d1739; background: #f0ebf6; }
+    .section { padding: 10px 12px 12px; }
+    button { width: 100%; margin: 5px 0; padding: 10px; border: 0; border-radius: 8px; cursor: pointer; font-weight: 700; text-align: left; }
     button.primary { background: #4b2464; color: #fff; }
     button.secondary { background: #ede7f6; color: #2d1739; }
     button.warning { background: #fff3cd; color: #6b4e00; }
     button.danger { background: #f8d7da; color: #842029; }
-    pre { white-space: pre-wrap; background: #111; color: #eee; padding: 10px; border-radius: 8px; max-height: 240px; overflow: auto; }
+    button.neutral { background: #e8eef6; color: #23364f; }
+    pre { white-space: pre-wrap; background: #111; color: #eee; padding: 10px; border-radius: 8px; max-height: 260px; overflow: auto; font-size: 11px; }
     .ok { color: #107c10; font-weight: 700; }
     .bad { color: #a80000; font-weight: 700; }
-    a.btn { display:block; text-align:center; text-decoration:none; margin:5px 0; padding:10px; border-radius:8px; font-weight:700; background:#ede7f6; color:#2d1739; }
-
+    a.btn { display:block; text-align:left; text-decoration:none; margin:5px 0; padding:10px; border-radius:8px; font-weight:700; background:#ede7f6; color:#2d1739; }
+    .tag { display:inline-block; padding:2px 6px; border-radius:999px; background:#eee; margin:1px 2px; font-size:11px; }
   </style>
 </head>
 <body>
   <h1>🎉 Félibrée Admin</h1>
-  <div class="muted" id="state">Chargement…</div>
+  <div class="muted">Pilotage, communication, IA staging, sauvegardes et calendrier.</div>
+  <div class="state muted" id="state">Chargement…</div>
 
-  <div class="card">
-    <button class="primary" onclick="run('refresh-cockpit')">🔄 Actualiser cockpit</button>
-    <button class="primary" onclick="run('quality-checks')">🔎 Contrôles qualité</button>
-    <button class="secondary" onclick="run('press-due')">📰 Relances presse dues</button>
-  </div>
+  <details open>
+    <summary>📘 Aide & supports</summary>
+    <div class="section">
+      <button class="secondary" onclick="run('open-aide-notice')">📘 Aide Notice — sidebar</button>
+      <button class="primary" onclick="run('open-aide-notice-fullscreen')">📘 Aide Notice — plein écran</button>
+      <button class="primary" onclick="run('open-carte-mentale-com-fullscreen')">🧠 Carte mentale COM — plein écran</button>
+      <button class="secondary" onclick="run('plan-communication-open')">🎯 Plan communication — timeline HTML</button>
+      <button class="secondary" onclick="run('open-admin-web')">🖥️ Afficher panneau Admin Web</button>
+      <a class="btn" id="adminWebLink" href="#" target="_blank">🖥️ Ouvrir Admin Web</a>
+      <a class="btn" id="calendarEmbedLink" href="#" target="_blank">📆 Ouvrir calendrier intégré</a>
+      <a class="btn" id="calendarSettingsLink" href="#" target="_blank">⚙️ Paramètres Google Calendar</a>
+    </div>
+  </details>
 
-  <div class="card">
-    <div class="muted">Aide Notice</div>
-    <button class="secondary" onclick="run('open-aide-notice')">📘 Aide Notice — sidebar</button>
-    <button class="primary" onclick="run('open-aide-notice-fullscreen')">📘 Aide Notice — plein écran</button>
-  </div>
+  <details open>
+    <summary>🎛️ Pilotage & contrôles</summary>
+    <div class="section">
+      <button class="primary" onclick="run('refresh-cockpit')">🔄 Actualiser cockpit</button>
+      <button class="primary" onclick="run('quality-checks')">🔎 Contrôles qualité</button>
+      <button class="secondary" onclick="run('press-due')">📰 Relances presse dues</button>
+    </div>
+  </details>
 
-  <div class="card">
-    <div class="muted">Carte mentale communication</div>
-    <button class="primary" onclick="run('open-carte-mentale-com-fullscreen')">🧠 Carte mentale COM — plein écran</button>
-    <button class="secondary" onclick="run('carte-mentale-com-diagnostic')">🧠 Diagnostic carte mentale</button>
-    <button class="secondary" onclick="run('carte-mentale-com-dry-run')">🧠 Dry-run MAJ carte mentale</button>
-  </div>
+  <details open>
+    <summary>📣 Communication</summary>
+    <div class="section">
+      <button class="primary" onclick="run('open-carte-mentale-com-fullscreen')">🧠 Carte mentale COM — plein écran</button>
+      <button class="secondary" onclick="run('carte-mentale-com-diagnostic')">🧠 Carte mentale COM — diagnostic</button>
+      <button class="secondary" onclick="run('carte-mentale-com-dry-run')">🧠 Carte mentale COM — dry-run MAJ</button>
+      <button class="secondary" onclick="run('plan-communication-open')">🎯 Plan communication — timeline HTML</button>
+      <button class="secondary" onclick="run('plan-communication-dry-run')">🎯 Plan communication — UI dry-run</button>
+      <button class="warning" onclick="confirmRun('plan-communication-apply', 'Appliquer la mise en forme stricte du plan communication ?')">🎯 Plan communication — APPLY protégé</button>
+    </div>
+  </details>
 
+  <details>
+    <summary>🧪 IA Staging / Gemini</summary>
+    <div class="section">
+      <div class="muted">Validation avant tout usage métier. L’IA n’injecte pas directement les onglets opérationnels.</div>
+      <button class="primary" onclick="run('ia-staging-open')">🧪 Ouvrir IA Staging</button>
+      <button class="secondary" onclick="run('ia-staging-summary')">📊 Résumé QA staging</button>
+      <button class="secondary" onclick="run('ia-staging-filter-priority')">🟢 Filtrer PRIORITY</button>
+      <button class="secondary" onclick="run('ia-staging-filter-context')">🟠 Filtrer CONTEXT</button>
+      <button class="secondary" onclick="run('ia-staging-filter-reject')">🔴 Filtrer REJECT</button>
+      <button class="secondary" onclick="run('ia-staging-clear-filter')">↩️ Enlever filtre</button>
+      <button class="secondary" onclick="run('ia-staging-gemini-status')">🧪 Gemini status</button>
+      <button class="secondary" onclick="run('ia-staging-gemini-search-dry-run')">🔎 Gemini Search — dry-run</button>
+      <button class="warning" onclick="confirmRun('ia-staging-gemini-search-apply', 'Écrire de nouvelles lignes uniquement dans 🧪 IA Staging ? Aucune injection métier.')">🔎 Gemini Search → Staging APPLY</button>
+      <button class="warning" onclick="confirmRun('ia-staging-gemini-url-apply', 'Écrire URL Context uniquement dans 🧪 IA Staging ? Aucune injection métier.')">🔗 Gemini URL Context → Staging APPLY</button>
+      <button class="secondary" onclick="run('ia-staging-safe-guard')">🛡️ Vérifier garde-fou no métier</button>
+    </div>
+  </details>
 
-  <div class="card">
-    <div class="muted">🧪 IA Staging / Gemini — validation avant métier</div>
-    <button class="primary" onclick="run('ia-staging-open')">🧪 Ouvrir IA Staging</button>
-    <button class="secondary" onclick="run('ia-staging-summary')">📊 Résumé QA staging</button>
-    <button class="secondary" onclick="run('ia-staging-filter-priority')">🟢 Filtrer PRIORITY</button>
-    <button class="secondary" onclick="run('ia-staging-filter-context')">🟠 Filtrer CONTEXT</button>
-    <button class="secondary" onclick="run('ia-staging-filter-reject')">🔴 Filtrer REJECT</button>
-    <button class="secondary" onclick="run('ia-staging-clear-filter')">↩️ Enlever filtre</button>
-    <button class="secondary" onclick="run('ia-staging-gemini-status')">🧪 Gemini status</button>
-    <button class="secondary" onclick="run('ia-staging-gemini-search-dry-run')">🔎 Gemini Search — dry-run</button>
-    <button class="warning" onclick="confirmRun('ia-staging-gemini-search-apply', 'Écrire de nouvelles lignes uniquement dans 🧪 IA Staging ? Aucune injection métier.')">🔎 Gemini Search → Staging APPLY</button>
-    <button class="warning" onclick="confirmRun('ia-staging-gemini-url-apply', 'Écrire URL Context uniquement dans 🧪 IA Staging ? Aucune injection métier.')">🔗 Gemini URL Context → Staging APPLY</button>
-    <button class="secondary" onclick="run('ia-staging-safe-guard')">🛡️ Vérifier garde-fou no métier</button>
-  </div>
+  <details>
+    <summary>🧩 Registry & intégrité</summary>
+    <div class="section">
+      <button class="secondary" onclick="run('registry-verify-dry-run')">🧩 Verify live vs backup — dry-run</button>
+      <button class="warning" onclick="confirmRun('registry-verify-apply', 'Écrire les alertes vert/orange/rouge dans 🧩 Script Registry ?')">🧩 Verify live vs backup — APPLY</button>
+      <button class="secondary" onclick="run('registry-open-alerts')">🚦 Ouvrir alertes drift</button>
+      <button class="secondary" onclick="run('registry-format-alerts')">🎨 Recolorer alertes</button>
+    </div>
+  </details>
 
-  <div class="card">
-    <div class="muted">🧩 Script Registry — alertes version live / backup</div>
-    <button class="secondary" onclick="run('registry-verify-dry-run')">🧩 Verify live vs backup — dry-run</button>
-    <button class="warning" onclick="confirmRun('registry-verify-apply', 'Écrire les alertes vert/orange/rouge dans 🧩 Script Registry ?')">🧩 Verify live vs backup — APPLY</button>
-    <button class="secondary" onclick="run('registry-open-alerts')">🚦 Ouvrir alertes drift</button>
-    <button class="secondary" onclick="run('registry-format-alerts')">🎨 Recolorer alertes</button>
-  </div>
+  <details>
+    <summary>⏱️ Planning & calendrier</summary>
+    <div class="section">
+      <button class="secondary" onclick="run('planning-dry-run')">⏱️ Planning strict — dry-run</button>
+      <button class="warning" onclick="confirmRun('planning-apply', 'Appliquer les règles planning dans les publications ?')">⏱️ Planning strict — APPLY</button>
+      <button class="secondary" onclick="run('calendar-dedicated-dry-run')">📆 Calendrier dédié — dry-run</button>
+      <button class="warning" onclick="confirmRun('calendar-dedicated-apply', 'Création réelle du calendrier dédié. Continuer uniquement si FELIBREE_ALLOW_CALENDAR_CREATE=TRUE est configuré dans les propriétés du script.')">📆 Créer calendrier dédié — APPLY protégé</button>
+      <button class="secondary" onclick="run('calendar-share-dry-run')">👥 Partage calendrier — dry-run</button>
+      <button class="warning" onclick="confirmRun('calendar-share-apply', 'Partage réel du calendrier avec les collaborateurs listés. Continuer uniquement si FELIBREE_ALLOW_CALENDAR_SHARE=TRUE est configuré dans les propriétés du script.')">👥 Partage calendrier — APPLY protégé</button>
+      <button class="secondary" onclick="run('calendar-dry-run')">📆 Publications vers calendrier — dry-run</button>
+      <button class="warning" onclick="confirmRun('calendar-apply', 'Écriture réelle des événements dans le calendrier dédié. Continuer uniquement si FELIBREE_ALLOW_CALENDAR_WRITE=TRUE est configuré dans les propriétés du script.')">📆 Publications vers calendrier — APPLY protégé</button>
+    </div>
+  </details>
 
+  <details>
+    <summary>💾 Backups & GitHub</summary>
+    <div class="section">
+      <button class="secondary" onclick="run('source-backup-dry-run')">💾 Source backup Drive — dry-run</button>
+      <button class="warning" onclick="confirmRun('source-backup-apply', 'Créer un ZIP de sauvegarde live dans Drive ?')">💾 Source backup Drive — APPLY</button>
+      <button class="secondary" onclick="run('full-backup-dry-run')">💾 Backup complet Drive + CLASP + GitHub — dry-run</button>
+      <button class="danger" onclick="confirmRun('full-backup-apply', 'Créer le backup Drive puis pousser le miroir CLASP-compatible vers GitHub ? Vérifier FELIBREE_ALLOW_SOURCE_BACKUP_WRITE=TRUE, FELIBREE_ALLOW_GITHUB_WRITE=TRUE et FELIBREE_GITHUB_TOKEN.')">💾 Backup complet Drive + CLASP + GitHub — APPLY</button>
+      <button class="secondary" onclick="run('github-sync-dry-run')">🐙 GitHub sync depuis source live — dry-run</button>
+      <button class="danger" onclick="confirmRun('github-sync-apply', 'Pousser le miroir CLASP-compatible vers GitHub depuis la source live ?')">🐙 GitHub sync depuis source live — APPLY</button>
+    </div>
+  </details>
 
-  <div class="card">
-    <button class="secondary" onclick="run('calendar-dedicated-dry-run')">📆 Calendrier dédié — dry-run</button>
-    <button class="warning" onclick="confirmRun('calendar-dedicated-apply', 'Création réelle du calendrier dédié. Continuer uniquement si FELIBREE_ALLOW_CALENDAR_CREATE=TRUE est configuré dans les propriétés du script.')">📆 Créer calendrier dédié — APPLY protégé</button>
-    <button class="secondary" onclick="run('calendar-share-dry-run')">👥 Partage calendrier — dry-run</button>
-    <button class="warning" onclick="confirmRun('calendar-share-apply', 'Partage réel du calendrier avec les collaborateurs listés. Continuer uniquement si FELIBREE_ALLOW_CALENDAR_SHARE=TRUE est configuré dans les propriétés du script.')">👥 Partage calendrier — APPLY protégé</button>
-    <button class="secondary" onclick="run('calendar-dry-run')">📆 Publications vers calendrier — dry-run</button>
-    <button class="warning" onclick="confirmRun('calendar-apply', 'Écriture réelle des événements dans le calendrier dédié. Continuer uniquement si FELIBREE_ALLOW_CALENDAR_WRITE=TRUE est configuré dans les propriétés du script.')">📆 Publications vers calendrier — APPLY protégé</button>
-  </div>
-
-
-  <div class="card">
-    <div class="muted">Liens admin</div>
-    <a class="btn" id="adminWebLink" href="#" target="_blank">🖥️ Ouvrir Admin Web</a>
-    <a class="btn" id="calendarEmbedLink" href="#" target="_blank">📆 Ouvrir calendrier intégré</a>
-    <a class="btn" id="calendarSettingsLink" href="#" target="_blank">⚙️ Paramètres Google Calendar</a>
-    <button class="secondary" onclick="run('open-admin-web')">🖥️ Afficher panneau Admin Web</button>
-  </div>
-
-
-  <div class="card">
-    <div class="muted">Sauvegarde live / CLASP / GitHub</div>
-    <button class="secondary" onclick="run('source-backup-dry-run')">💾 Source backup Drive — dry-run</button>
-    <button class="warning" onclick="confirmRun('source-backup-apply', 'Créer un ZIP de sauvegarde live dans Drive ?')">💾 Source backup Drive — APPLY</button>
-    <button class="secondary" onclick="run('full-backup-dry-run')">💾 Backup complet Drive + CLASP + GitHub — dry-run</button>
-    <button class="danger" onclick="confirmRun('full-backup-apply', 'Créer le backup Drive puis pousser le miroir CLASP-compatible vers GitHub ? Vérifier FELIBREE_ALLOW_SOURCE_BACKUP_WRITE=TRUE, FELIBREE_ALLOW_GITHUB_WRITE=TRUE et FELIBREE_GITHUB_TOKEN.')">💾 Backup complet Drive + CLASP + GitHub — APPLY</button>
-    <button class="secondary" onclick="run('github-sync-dry-run')">🐙 GitHub sync depuis source live — dry-run</button>
-    <button class="danger" onclick="confirmRun('github-sync-apply', 'Pousser le miroir CLASP-compatible vers GitHub depuis la source live ?')">🐙 GitHub sync depuis source live — APPLY</button>
-  </div>
-
-  <div class="card">
-    <button class="secondary" onclick="confirmRun('install-triggers', 'Installer les triggers automatiques quotidiens et hebdomadaires ?')">⏱️ Installer triggers</button>
-    <button class="danger" onclick="confirmRun('remove-triggers', 'Supprimer les triggers Félibrée existants ?')">🛑 Supprimer triggers</button>
-    <button class="secondary" onclick="run('install')">⚙️ Initialiser / réparer onglets techniques</button>
-  </div>
+  <details>
+    <summary>⚙️ Admin technique</summary>
+    <div class="section">
+      <button class="secondary" onclick="run('install-triggers')">⏱️ Installer triggers</button>
+      <button class="danger" onclick="confirmRun('remove-triggers', 'Supprimer les triggers Félibrée existants ?')">🛑 Supprimer triggers</button>
+      <button class="secondary" onclick="run('install')">⚙️ Initialiser / réparer onglets techniques</button>
+      <div class="muted">Le statut/réglage du déclencheur d’ouverture est dans le menu principal, rubrique ⚙️ Admin technique.</div>
+    </div>
+  </details>
 
   <div class="card">
     <div class="muted">Résultat</div>
@@ -117,7 +142,6 @@
         'Création calendrier: ' + (s.calendarCreateEnabled ? '<span class="ok">ON</span>' : '<span class="bad">OFF</span>') + '<br>' +
         'Partage calendrier: ' + (s.calendarShareEnabled ? '<span class="ok">ON</span>' : '<span class="bad">OFF</span>') + '<br>' +
         'Écriture événements: ' + (s.calendarWriteEnabled ? '<span class="ok">ON</span>' : '<span class="bad">OFF / dry-run</span>') + '<br>' +
-        'Admin web: ' + (s.adminWebUrl ? '<span class="ok">URL configurée</span>' : '<span class="bad">à déployer</span>') + '<br>' +
         'Planning write: ' + (s.planningWriteEnabled ? '<span class="ok">ON</span>' : '<span class="bad">OFF / apply bloqué</span>') + '<br>' +
         'Source backup: ' + (s.sourceBackupEnabled ? '<span class="ok">ON</span>' : '<span class="bad">OFF / apply bloqué</span>') + '<br>' +
         'GitHub write: ' + (s.githubWriteEnabled ? '<span class="ok">ON</span>' : '<span class="bad">OFF / apply bloqué</span>') + '<br>' +
@@ -126,6 +150,8 @@
         'Aide Notice: ' + (s.aideNoticeVersion || 'not-installed') + '<br>' +
         'Aide plein écran: ' + (s.aideNoticeFullscreenVersion || 'not-installed') + '<br>' +
         'Carte mentale COM: ' + (s.carteMentaleComVersion || 'not-installed') + '<br>' +
+        'Plan Communication: ' + (s.planCommunicationTimelineVersion || 'not-installed') + '<br>' +
+        'Admin web: ' + (s.adminWebUrl ? '<span class="ok">URL configurée</span>' : '<span class="bad">à déployer</span>') + '<br>' +
         'GitHub repo: ' + s.githubOwner + '/' + s.githubRepo + ' [' + s.githubBranch + '] / ' + s.githubPathPrefix;
 
       document.getElementById('adminWebLink').href = s.adminWebUrl || s.spreadsheetUrl;

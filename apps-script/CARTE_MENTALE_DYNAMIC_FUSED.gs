@@ -1,6 +1,6 @@
 /**
  * 🎉 Felibrejada dins Brantome en Perigor
- * Carte mentale Communication — moteur propre v1.4 CLEAN.
+ * Carte mentale Communication — moteur propre v1.4.1 HTML TEMPLATE NAME FIX.
  *
  * Objectif : nettoyer le menu Apps Script.
  * Fonctions publiques conservées :
@@ -12,16 +12,19 @@
  * Aucun onOpen, aucun doGet, aucun FBR_MENU_MASTER.
  * Le rendu principal reste la carte pro figée base64.
  * Le moteur dynamique sert au diagnostic et au dry-run des données validées.
+ *
+ * Correctif v1.4.1 : aligne les noms HtmlService sur les deux fichiers HTML réellement
+ * présents dans le projet live capturé par le backup 7e49bb77.
  */
 
-var FBR_CARTE_MENTALE_DYNAMIC_VERSION = 'v1.4.0-clean-public-20260711';
+var FBR_CARTE_MENTALE_DYNAMIC_VERSION = 'v1.4.1-html-template-name-fix-20260712';
 
 var FBR_CARTE_MENTALE_COM_ENGINE = (function () {
 
 /**
  * 🎉 Felibrejada dins Brantome en Perigor
  * Carte mentale dynamique — Configuration.
- * Version: v1.3.0
+ * Version: v1.4.1
  *
  * Aucun onOpen, aucun FBR_MENU_MASTER, aucun doGet.
  * Source de vérité: onglets validés + registre assets.
@@ -30,8 +33,8 @@ var FBR_CARTE_MENTALE_COM_ENGINE = (function () {
 
 var FBR_CARTE_MENTALE_DYNAMIC = {
   VERSION: FBR_CARTE_MENTALE_DYNAMIC_VERSION,
-  TEMPLATE_HTML: 'FBR_CARTE_MENTALE_DYNAMIC_HTML_v1',
-  STATIC_PRO_HTML: 'FBR_CARTE_MENTALE_COM_2027_HTML',
+  TEMPLATE_HTML: 'CARTE_MENTALE_DYNAMIC_HTML',
+  STATIC_PRO_HTML: 'CARTE_MENTALE_COM_2027_HTML',
   MAP_ID_COM: 'MAP-COM-STRATEGIE',
   LOGO_ASSET_ID: 'ASSET-LOGO-BLAU-PERIGORD-OFFICIEL',
 

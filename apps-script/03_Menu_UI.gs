@@ -1,78 +1,98 @@
 /**
- * 🎉 Félibrée 2027 — Menu et routage sidebar (fichier live complet)
- * Fichier : 03_Menu_UI.gs
- * Version patch : v0.4.0-menu-sidebar-safe-current-20260712
- * Baseline : backup live 874dd14a / GitHub 551334e93bf0221954b31d50da4b2b50fec35605
- *
- * Règles :
- * - conserve l'unique FBR_onOpen existant ; aucun nouvel onOpen / doGet / menu maître ;
- * - conserve Plan Communication et les fonctions de réparation du déclencheur menu ;
- * - corrige les routes carte mentale vers les fonctions publiques v1.4 CLEAN ;
- * - garde les anciennes clés d'action V1 uniquement comme alias de compatibilité.
+ * 03_Menu_UI.gs — menu métiers + sidebar router.
+ * Version: v0.5-current-recheck-20260711
+ * Base auditée: fichier utilisateur "Code collé.js".
+ * Contraintes:
+ * - aucun onOpen ajouté ici ; onOpen(e) reste dans 00_Code.gs et appelle FBR_onOpen(e)
+ * - aucun doGet
+ * - aucun FBR_MENU_MASTER
+ * - routes carte mentale nettoyées vers les fonctions publiques propres
  */
 
 function FBR_onOpen(e) {
   var ui = SpreadsheetApp.getUi();
 
-  ui.createMenu('🎉 Félibrée Admin')
-    .addItem('🎛️ Ouvrir la sidebar', 'FELIBREE_openSidebar')
-    .addItem('📘 Aide Notice', 'FELIBREE_openAideNotice')
+  var aideMenu = ui.createMenu('📘 Aide & supports')
+    .addItem('📘 Aide Notice — sidebar', 'FELIBREE_openAideNotice')
     .addItem('📘 Aide Notice — plein écran', 'FELIBREE_openAideNoticeFullscreen')
-    .addItem('🧠 Carte mentale COM — plein écran', 'FELIBREE_openCarteMentaleComFullscreen')
-    .addItem('🖥️ Admin web / calendrier intégré', 'FELIBREE_openAdminWeb')
-    .addItem('🎯 Plan communication — timeline HTML', 'FELIBREE_openPlanCommunicationTimeline')
-
     .addSeparator()
+    .addItem('🧠 Carte mentale COM — plein écran', 'FELIBREE_openCarteMentaleComFullscreen')
+    .addItem('🎯 Plan communication — timeline HTML', 'FELIBREE_openPlanCommunicationTimeline')
+    .addSeparator()
+    .addItem('🖥️ Admin web / calendrier intégré', 'FELIBREE_openAdminWeb');
+
+  var pilotageMenu = ui.createMenu('🎛️ Pilotage & contrôles')
     .addItem('🔄 Actualiser cockpit', 'FELIBREE_refreshCockpit')
     .addItem('🔎 Contrôles qualité', 'FELIBREE_runQualityChecks')
-    .addItem('📰 Relances presse dues', 'FELIBREE_showPressDue')
+    .addItem('📰 Relances presse dues', 'FELIBREE_showPressDue');
 
-    .addSeparator()
-    .addItem('🧪 IA Staging — ouvrir', 'FELIBREE_openIaStaging')
-    .addItem('🧪 IA Staging — résumé QA', 'FELIBREE_iaStagingSummary')
-    .addItem('🧪 IA Staging — filtre PRIORITY', 'FELIBREE_iaStagingFilterPriority')
-    .addItem('🧪 IA Staging — filtre CONTEXT', 'FELIBREE_iaStagingFilterContext')
-    .addItem('🧪 IA Staging — filtre REJECT', 'FELIBREE_iaStagingFilterReject')
-    .addItem('🧪 IA Staging — enlever filtre', 'FELIBREE_iaStagingClearFilter')
-
-    .addSeparator()
-    .addItem('🧩 Registry gate — dry-run', 'FELIBREE_registryVerifyLiveVsBackupDryRun')
-    .addItem('🧩 Registry gate — APPLY alertes', 'FELIBREE_registryVerifyLiveVsBackupApply')
-    .addItem('🧩 Registry gate — ouvrir alertes', 'FELIBREE_registryOpenDriftAlerts')
-
-    .addSeparator()
-    .addItem('💾 Source backup Drive — dry-run', 'FELIBREE_backupSourceDryRun')
-    .addItem('💾 Source backup Drive — APPLY protégé', 'FELIBREE_backupSourceToDriveApply')
-    .addItem('💾 Backup complet Drive + CLASP + GitHub — dry-run', 'FELIBREE_backupDriveClaspGithubDryRun')
-    .addItem('💾 Backup complet Drive + CLASP + GitHub — APPLY protégé', 'FELIBREE_backupDriveClaspGithubApply')
-    .addItem('🐙 GitHub sync depuis source live — dry-run', 'FELIBREE_syncGithubDryRun')
-    .addItem('🐙 GitHub sync depuis source live — APPLY protégé', 'FELIBREE_syncGithubApply')
-
-    .addSeparator()
-    .addItem('⏱️ Planning strict — dry-run', 'FELIBREE_applyPlanningRulesDryRun')
-    .addItem('⏱️ Appliquer règles planning — APPLY', 'FELIBREE_applyPlanningRulesApply')
+  var communicationMenu = ui.createMenu('📣 Communication')
+    .addItem('🎯 Plan communication — timeline HTML', 'FELIBREE_openPlanCommunicationTimeline')
     .addItem('🎯 Plan communication — UI dry-run', 'FELIBREE_planCommunicationTimelineDryRun')
     .addItem('🎯 Plan communication — APPLY protégé', 'FELIBREE_planCommunicationTimelineApply')
+    .addSeparator()
+    .addItem('🧠 Carte mentale COM — plein écran', 'FELIBREE_openCarteMentaleComFullscreen')
+    .addItem('🧠 Carte mentale COM — diagnostic', 'FELIBREE_carteMentaleComDiagnostic')
+    .addItem('🧠 Carte mentale COM — dry-run MAJ', 'FELIBREE_refreshCarteMentaleComDryRun')
+    .addSeparator()
+    .addItem('📰 Relances presse dues', 'FELIBREE_showPressDue');
 
+  var iaMenu = ui.createMenu('🧪 IA Staging')
+    .addItem('🧪 Ouvrir IA Staging', 'FELIBREE_openIaStaging')
+    .addItem('📊 Résumé QA staging', 'FELIBREE_iaStagingSummary')
+    .addSeparator()
+    .addItem('🟢 Filtrer PRIORITY', 'FELIBREE_iaStagingFilterPriority')
+    .addItem('🟠 Filtrer CONTEXT', 'FELIBREE_iaStagingFilterContext')
+    .addItem('🔴 Filtrer REJECT', 'FELIBREE_iaStagingFilterReject')
+    .addItem('↩️ Enlever filtre', 'FELIBREE_iaStagingClearFilter');
+
+  var registryMenu = ui.createMenu('🧩 Registry & intégrité')
+    .addItem('🧩 Registry gate — dry-run', 'FELIBREE_registryVerifyLiveVsBackupDryRun')
+    .addItem('🧩 Registry gate — APPLY alertes', 'FELIBREE_registryVerifyLiveVsBackupApply')
+    .addItem('🧩 Registry gate — ouvrir alertes', 'FELIBREE_registryOpenDriftAlerts');
+
+  var backupMenu = ui.createMenu('💾 Backups & GitHub')
+    .addItem('💾 Source backup Drive — dry-run', 'FELIBREE_backupSourceDryRun')
+    .addItem('💾 Source backup Drive — APPLY protégé', 'FELIBREE_backupSourceToDriveApply')
+    .addSeparator()
+    .addItem('💾 Backup complet Drive + CLASP + GitHub — dry-run', 'FELIBREE_backupDriveClaspGithubDryRun')
+    .addItem('💾 Backup complet Drive + CLASP + GitHub — APPLY protégé', 'FELIBREE_backupDriveClaspGithubApply')
+    .addSeparator()
+    .addItem('🐙 GitHub sync depuis source live — dry-run', 'FELIBREE_syncGithubDryRun')
+    .addItem('🐙 GitHub sync depuis source live — APPLY protégé', 'FELIBREE_syncGithubApply');
+
+  var planningMenu = ui.createMenu('⏱️ Planning & calendrier')
+    .addItem('⏱️ Planning strict — dry-run', 'FELIBREE_applyPlanningRulesDryRun')
+    .addItem('⏱️ Appliquer règles planning — APPLY', 'FELIBREE_applyPlanningRulesApply')
     .addSeparator()
     .addItem('📆 Calendrier dédié — dry-run', 'FELIBREE_prepareDedicatedCalendarDryRun')
     .addItem('📆 Créer calendrier — APPLY protégé', 'FELIBREE_prepareDedicatedCalendarApply')
     .addItem('👥 Partage calendrier — dry-run', 'FELIBREE_shareDedicatedCalendarDryRun')
     .addItem('👥 Partage calendrier — APPLY protégé', 'FELIBREE_shareDedicatedCalendarApply')
     .addItem('📆 Publications vers calendrier — dry-run', 'FELIBREE_syncCalendarDryRun')
-    .addItem('📆 Publications vers calendrier — APPLY protégé', 'FELIBREE_syncCalendarApply')
+    .addItem('📆 Publications vers calendrier — APPLY protégé', 'FELIBREE_syncCalendarApply');
 
-    .addSeparator()
+  var adminMenu = ui.createMenu('⚙️ Admin technique')
     .addItem('🧭 Menu — statut déclencheur ouverture', 'FELIBREE_menuOpenTriggerStatus')
     .addItem('🧭 Menu — installer/réparer déclencheur', 'FELIBREE_installMenuOpenTrigger')
+    .addSeparator()
     .addItem('⏱️ Installer triggers', 'FELIBREE_installTriggers')
     .addItem('🛑 Supprimer triggers', 'FELIBREE_removeTriggers')
-
     .addSeparator()
-    .addItem('⚙️ Initialiser / réparer onglets techniques', 'FELIBREE_install')
+    .addItem('⚙️ Initialiser / réparer onglets techniques', 'FELIBREE_install');
+
+  ui.createMenu('🎉 Félibrée Admin')
+    .addItem('🎛️ Ouvrir la sidebar', 'FELIBREE_openSidebar')
+    .addSubMenu(aideMenu)
+    .addSubMenu(pilotageMenu)
+    .addSubMenu(communicationMenu)
+    .addSubMenu(iaMenu)
+    .addSubMenu(registryMenu)
+    .addSubMenu(planningMenu)
+    .addSubMenu(backupMenu)
+    .addSubMenu(adminMenu)
     .addToUi();
 }
-
 
 function FBR_showSidebar_() {
   var html = HtmlService.createHtmlOutputFromFile('04_Sidebar')
@@ -81,7 +101,6 @@ function FBR_showSidebar_() {
 
   SpreadsheetApp.getUi().showSidebar(html);
 }
-
 
 function FBR_sidebarAction_(action) {
   switch (action) {
@@ -190,7 +209,6 @@ function FBR_sidebarAction_(action) {
     case 'open-carte-mentale-com-fullscreen':
       return FELIBREE_openCarteMentaleComFullscreen();
 
-    // Route propre actuelle + alias legacy conservé pour compatibilité.
     case 'carte-mentale-com-diagnostic':
     case 'carte-mentale-com-v1-diagnostic':
       return FELIBREE_carteMentaleComDiagnostic();
@@ -224,7 +242,6 @@ function FBR_sidebarAction_(action) {
       throw new Error('Action inconnue sidebar : ' + action);
   }
 }
-
 
 function FBR_getUiState_() {
   FBR_ensureCoreSheets_();
@@ -287,9 +304,7 @@ function FBR_getUiState_() {
     carteMentaleComVersion:
       (typeof FBR_CARTE_MENTALE_DYNAMIC_VERSION !== 'undefined')
         ? FBR_CARTE_MENTALE_DYNAMIC_VERSION
-        : ((typeof FBR_CARTE_MENTALE_COM_VERSION !== 'undefined')
-            ? FBR_CARTE_MENTALE_COM_VERSION
-            : 'not-installed'),
+        : 'not-installed',
 
     planCommunicationTimelineVersion:
       (typeof FBR_PLAN_COMM_TIMELINE_VERSION !== 'undefined')
