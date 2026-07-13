@@ -156,7 +156,7 @@ function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_cfg_() {
   };
 }
 
-function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_desiredRegistryHeaders_() {
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_LEGACY_V012_desiredRegistryHeaders_() {
   return [
     'Fichier script', 'Famille / rôle', 'Fonction principale', 'Type', 'Statut', 'Criticité',
     'Live present', 'À jour sauvegarde', 'Dernier backup', 'Registry alert', 'Présent menu', 'Présent sidebar',
@@ -166,7 +166,7 @@ function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_desiredRegistryHeaders_() {
   ];
 }
 
-function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_rebuildScriptRegistryEssential_(sh) {
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_LEGACY_V012_rebuildScriptRegistryEssential_(sh) {
   // v0.1.2: stale validations can block setValues during schema rebuild.
   FBR_UI_FAMILY_REGISTRY_CORRECTIONS_clearValidationsSafe_(sh);
   FBR_UI_FAMILY_REGISTRY_CORRECTIONS_clearConditionalFormatsSafe_(sh);
@@ -369,7 +369,7 @@ function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_setMinRowHeights_(sh, lastRow) {
   if (lastRow >= 5) sh.setRowHeightsForced(5, lastRow - 4, 34);
 }
 
-function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_formatScriptRegistry_(ss, sh) {
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_LEGACY_V012_formatScriptRegistry_(ss, sh) {
   // Header order v0.1.2:
   // A File, B Family, C Function, D Type, E Status, F Criticality, G Live, H Backup fresh, I Backup, J Alert, K Menu, L Sidebar, M Wrapper, N Update mode...
   FBR_UI_FAMILY_REGISTRY_CORRECTIONS_compactWidths_(sh, [190, 140, 230, 130, 150, 80, 95, 120, 120, 125, 135, 135, 120, 140, 130, 180, 190, 180, 260, 120, 220, 260, 130, 120, 220, 220, 130, 120, 260, 180]);
@@ -391,7 +391,7 @@ function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_formatScriptRegistry_(ss, sh) {
   FBR_UI_FAMILY_REGISTRY_CORRECTIONS_condRegistryAlert_(sh, 'J5:J500');
 }
 
-function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_formatUiScriptsAudit_(ss, sh) {
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_LEGACY_V012_formatUiScriptsAudit_(ss, sh) {
   FBR_UI_FAMILY_REGISTRY_CORRECTIONS_compactWidths_(sh, [160, 260, 140, 220, 150, 150, 240, 80, 70, 200, 240, 220, 300]);
   FBR_UI_FAMILY_REGISTRY_CORRECTIONS_applyClosedList_(sh, 'H5:H220', ['Non', 'Oui, après archive', 'Parking']);
   FBR_UI_FAMILY_REGISTRY_CORRECTIONS_applyClosedList_(sh, 'I5:I220', ['P0', 'P1', 'P2', 'P3']);
@@ -449,12 +449,12 @@ function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_clearConditionalFormatsSafe_(sh) {
   }
 }
 
-function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_applyClosedList_(sh, a1, values) {
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_LEGACY_V012_applyClosedList_(sh, a1, values) {
   var rule = SpreadsheetApp.newDataValidation().requireValueInList(values, true).setAllowInvalid(false).build();
   sh.getRange(a1).setDataValidation(rule);
 }
 
-function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_applyConnectedList_(ss, sh, a1, kind) {
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_LEGACY_V012_applyConnectedList_(ss, sh, a1, kind) {
   var range = FBR_UI_FAMILY_REGISTRY_CORRECTIONS_refRange_(ss, kind);
   if (!range) return;
   var rule = SpreadsheetApp.newDataValidation().requireValueInRange(range, true).setAllowInvalid(false).build();
@@ -517,7 +517,7 @@ function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_hideBlankRowsSafe_(sh, rows) {
   }
 }
 
-function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_auditInvalidChoices_(ss, sh, kind, lastRow) {
+function FBR_UI_FAMILY_REGISTRY_CORRECTIONS_LEGACY_V012_auditInvalidChoices_(ss, sh, kind, lastRow) {
   // Dry-run report only. Apply does not erase invalid existing values.
   var checks = [];
   if (kind === 'script_registry') {
