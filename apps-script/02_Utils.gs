@@ -173,7 +173,6 @@ function FBR_ensureCoreSheets_() {
   FBR_ensureCalendarConfigSheet_();
   FBR_ensureAdminSheetHeaders_(FBR.SHEETS.CALENDAR, '📆 Calendar Sync — publication vers Google Calendar', FBR.ADMIN_HEADERS.CALENDAR);
   FBR_ensureAdminSheetHeaders_(FBR.SHEETS.EXPORTS, '📤 Exports — packs, snapshots, livrables', FBR.ADMIN_HEADERS.EXPORTS);
-  FBR_ensureAdminWebSheet_();
 }
 
 
@@ -239,29 +238,6 @@ function FBR_addMinutes_(date, minutes) {
   var d = new Date(date.getTime());
   d.setMinutes(d.getMinutes() + Number(minutes || 30));
   return d;
-}
-
-function FBR_ensureAdminWebSheet_() {
-  var sheet = FBR_sheet_(FBR.SHEETS.ADMIN_WEB, true);
-  if (FBR_isBlank_(sheet.getRange(1, 1).getValue())) {
-    sheet.getRange(1, 1).setValue('🖥️ Admin Web — version privée à créer / développer');
-  }
-  if (FBR_isBlank_(sheet.getRange(2, 1).getValue())) {
-    sheet.getRange(2, 1).setValue('Page admin privée : cockpit, liens Sheet/Drive, iframe Google Calendar, logs et actions sécurisées.');
-  }
-  sheet.getRange(4, 1, 1, FBR.ADMIN_HEADERS.ADMIN_WEB.length).setValues([FBR.ADMIN_HEADERS.ADMIN_WEB]);
-  var defaults = [
-    ['URL admin web Apps Script', FBR_getScriptProperty_(FBR.PROP.ADMIN_WEB_URL, FBR_ADMIN_WEB_DEFAULTS.ADMIN_WEB_URL), 'À renseigner après déploiement Web App', 'Accès admin privé depuis menu/sidebar', 'P0', 'Déploiement restreint, jamais public.'],
-    ['URL embed calendrier', 'Prêt', FBR_ADMIN_WEB_DEFAULTS.CALENDAR_EMBED_URL, 'Iframe calendrier communication', 'P0', 'Admin privé seulement.'],
-    ['Iframe calendrier', 'Prêt', '<iframe src="https://calendar.google.com/calendar/embed?src=c_5ded6172d45bbaaa6389eda318fce1893fb8f5f5e32df1eaa0af4a2cfd90aac9%40group.calendar.google.com&ctz=Europe%2FParis" style="border:0" width="100%" height="720" frameborder="0" scrolling="no"></iframe>', 'À intégrer dans page admin', 'P0', 'Ne pas intégrer sur site public.'],
-    ['Google Sheet cockpit', 'OK', FBR_ADMIN_WEB_DEFAULTS.SPREADSHEET_URL, 'Lien pilotage principal', 'P0', ''],
-    ['Paramètres calendrier', 'OK', FBR_ADMIN_WEB_DEFAULTS.CALENDAR_SETTINGS_URL, 'Réglages calendrier', 'P0', 'Lien admin propriétaire.']
-  ];
-  var existing = sheet.getRange(5, 1, defaults.length, 6).getValues();
-  for (var i = 0; i < defaults.length; i++) {
-    if (FBR_isBlank_(existing[i][0])) sheet.getRange(5 + i, 1, 1, 6).setValues([defaults[i]]);
-  }
-  sheet.setFrozenRows(FBR.HEADER_ROW);
 }
 
 function FBR_getScriptProperty_(key, defaultValue) {

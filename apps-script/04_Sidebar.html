@@ -35,9 +35,6 @@
       <button class="primary" onclick="run('open-aide-notice-fullscreen')">📘 Aide Notice — plein écran</button>
       <button class="primary" onclick="run('open-carte-mentale-com-fullscreen')">🧠 Carte mentale COM — plein écran</button>
       <button class="secondary" onclick="run('plan-communication-open')">🎯 Plan communication — timeline HTML</button>
-      <button class="primary" onclick="run('plan-communication-standalone')">🌐 Plan communication — onglet Chrome</button>
-      <button class="secondary" onclick="run('open-admin-web')">🖥️ Afficher panneau Admin Web</button>
-      <a class="btn" id="adminWebLink" href="#" target="_blank">🖥️ Ouvrir Admin Web</a>
       <a class="btn" id="calendarEmbedLink" href="#" target="_blank">📆 Ouvrir calendrier intégré</a>
       <a class="btn" id="calendarSettingsLink" href="#" target="_blank">⚙️ Paramètres Google Calendar</a>
     </div>
@@ -59,7 +56,6 @@
       <button class="secondary" onclick="run('carte-mentale-com-diagnostic')">🧠 Carte mentale COM — diagnostic</button>
       <button class="secondary" onclick="run('carte-mentale-com-dry-run')">🧠 Carte mentale COM — dry-run MAJ</button>
       <button class="secondary" onclick="run('plan-communication-open')">🎯 Plan communication — timeline HTML</button>
-      <button class="primary" onclick="run('plan-communication-standalone')">🌐 Plan communication — onglet Chrome</button>
       <button class="secondary" onclick="run('plan-communication-dry-run')">🎯 Plan communication — UI dry-run</button>
       <button class="warning" onclick="confirmRun('plan-communication-apply', 'Appliquer la mise en forme stricte du plan communication ?')">🎯 Plan communication — APPLY protégé</button>
     </div>
@@ -153,10 +149,8 @@
         'Aide plein écran: ' + (s.aideNoticeFullscreenVersion || 'not-installed') + '<br>' +
         'Carte mentale COM: ' + (s.carteMentaleComVersion || 'not-installed') + '<br>' +
         'Plan Communication: ' + (s.planCommunicationTimelineVersion || 'not-installed') + '<br>' +
-        'Admin web: ' + (s.adminWebUrl ? '<span class="ok">URL configurée</span>' : '<span class="bad">à déployer</span>') + '<br>' +
         'GitHub repo: ' + s.githubOwner + '/' + s.githubRepo + ' [' + s.githubBranch + '] / ' + s.githubPathPrefix;
 
-      document.getElementById('adminWebLink').href = s.adminWebUrl || s.spreadsheetUrl;
       document.getElementById('calendarEmbedLink').href = s.calendarEmbedUrl;
       document.getElementById('calendarSettingsLink').href = s.calendarSettingsUrl;
 

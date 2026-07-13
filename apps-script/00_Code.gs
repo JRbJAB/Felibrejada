@@ -38,34 +38,15 @@ function FELIBREE_aideNoticeFullscreenDiagnostic() {
   return FBR_HELP_STATIC_fullscreenDiagnostic_();
 }
 
-function doGet(e) {
-  return FBR_doGetAdminWeb_(e);
-}
-
-function FELIBREE_openAdminWeb() {
-  return FBR_showAdminWebDialog_();
-}
-
-function FELIBREE_getAdminWebState() {
-  return FBR_getAdminWebState_();
-}
-
-function FELIBREE_setAdminWebUrl(url) {
-  return FBR_setAdminWebUrl_(url);
-}
-
-
+/**
+ * Web Apps séparées :
+ * - l’ancien déploiement Admin/calendrier reste figé sur sa version publiée ;
+ * - HEAD n’expose plus de doGet ni de wrappers Admin Web ;
+ * - les futurs Web Admin et Web User vivent dans deux projets autonomes.
+ */
 
 function FELIBREE_openPlanCommunicationTimeline() {
   return FBR_PLAN_COMM_showTimelineDialog_();
-}
-
-function FELIBREE_openPlanCommunicationHtmlTab() {
-  return FBR_PLAN_COMM_openStandaloneTab_();
-}
-
-function FELIBREE_getPlanCommunicationHtmlUrl() {
-  return FBR_PLAN_COMM_getStandaloneWebUrl_();
 }
 
 function FELIBREE_getPlanCommunicationTimelineState() {

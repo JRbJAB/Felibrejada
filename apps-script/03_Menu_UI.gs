@@ -1,6 +1,6 @@
 /**
  * 03_Menu_UI.gs — menu métiers + sidebar router.
- * Version: v0.6-plan-com-standalone-webapp-current-20260712
+ * Version: v0.6.5-admin-web-sheet-retirement-current-20260713
  * Base auditée: fichier utilisateur "Code collé.js".
  * Contraintes:
  * - aucun onOpen ajouté ici ; onOpen(e) reste dans 00_Code.gs et appelle FBR_onOpen(e)
@@ -17,10 +17,7 @@ function FBR_onOpen(e) {
     .addItem('📘 Aide Notice — plein écran', 'FELIBREE_openAideNoticeFullscreen')
     .addSeparator()
     .addItem('🧠 Carte mentale COM — plein écran', 'FELIBREE_openCarteMentaleComFullscreen')
-    .addItem('🎯 Plan communication — timeline HTML', 'FELIBREE_openPlanCommunicationTimeline')
-    .addItem('🌐 Plan communication — onglet Chrome', 'FELIBREE_openPlanCommunicationHtmlTab')
-    .addSeparator()
-    .addItem('🖥️ Admin web / calendrier intégré', 'FELIBREE_openAdminWeb');
+    .addItem('🎯 Plan communication — timeline HTML', 'FELIBREE_openPlanCommunicationTimeline');
 
   var pilotageMenu = ui.createMenu('🎛️ Pilotage & contrôles')
     .addItem('🔄 Actualiser cockpit', 'FELIBREE_refreshCockpit')
@@ -29,7 +26,6 @@ function FBR_onOpen(e) {
 
   var communicationMenu = ui.createMenu('📣 Communication')
     .addItem('🎯 Plan communication — timeline HTML', 'FELIBREE_openPlanCommunicationTimeline')
-    .addItem('🌐 Plan communication — onglet Chrome', 'FELIBREE_openPlanCommunicationHtmlTab')
     .addItem('🎯 Plan communication — UI dry-run', 'FELIBREE_planCommunicationTimelineDryRun')
     .addItem('🎯 Plan communication — APPLY protégé', 'FELIBREE_planCommunicationTimelineApply')
     .addSeparator()
@@ -219,14 +215,8 @@ function FBR_sidebarAction_(action) {
     case 'carte-mentale-com-v1-dry-run':
       return FELIBREE_refreshCarteMentaleComDryRun();
 
-    case 'open-admin-web':
-      return FBR_showAdminWebDialog_();
-
     case 'plan-communication-open':
       return FBR_PLAN_COMM_showTimelineDialog_();
-
-    case 'plan-communication-standalone':
-      return FBR_PLAN_COMM_openStandaloneTab_();
 
     case 'plan-communication-dry-run':
       return FBR_PLAN_COMM_uiStrictDryRun_();
@@ -282,7 +272,6 @@ function FBR_getUiState_() {
     dryRunDefault: true,
 
     spreadsheetUrl: FBR_ss_().getUrl(),
-    adminWebUrl: FBR_getScriptProperty_(FBR.PROP.ADMIN_WEB_URL, ''),
     calendarEmbedUrl: FBR_calendarEmbedUrl_(),
     calendarSettingsUrl: FBR_ADMIN_WEB_DEFAULTS.CALENDAR_SETTINGS_URL,
 

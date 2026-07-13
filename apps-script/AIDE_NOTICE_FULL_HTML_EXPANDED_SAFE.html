@@ -304,16 +304,16 @@ const TABS = [
     "next": "Valider arborescence avant publication."
   },
   {
-    "name": "🖥️ Admin Web",
-    "domain": "Admin site",
-    "role": "Paramétrage admin web, URL, état, dialogue privé.",
-    "owner": "JRbIA / Admin",
-    "criticality": "P1",
-    "update": "À chaque changement site",
-    "writes": "Oui",
-    "source": "Site Web, APIs",
-    "risk": "Exposer un admin ou une URL non validée.",
-    "next": "Garder privé, sécurisé, documenté."
+    "name": "🌐 Web Admin & User",
+    "domain": "Architecture Web / déploiements",
+    "role": "Suivi maître des deux Web Apps séparées : Backoffice Admin et interface User/Client.",
+    "owner": "JRbIA / Web / Admin",
+    "criticality": "P0",
+    "update": "À chaque évolution du chantier",
+    "writes": "Suivi uniquement",
+    "source": "Décisions architecture, sécurité, déploiements",
+    "risk": "Mélanger droits, scopes, données ou URLs Admin et User.",
+    "next": "Créer FELIBREE_WEB_ADMIN et FELIBREE_WEB_USER dans deux projets distincts."
   },
   {
     "name": "🤖 Chatbot",

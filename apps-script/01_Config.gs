@@ -1,4 +1,4 @@
-var FELIBREE_SCRIPT_VERSION = 'felibree-strict-ui-automation-v0.6.4-plan-com-standalone-webapp-current-20260712';
+var FELIBREE_SCRIPT_VERSION = 'felibree-strict-ui-automation-v0.6.5-admin-web-sheet-retirement-current-20260713';
 
 var FBR = {
   SHEETS: {
@@ -17,8 +17,7 @@ var FBR = {
     LOGS: '🧾 Logs',
     CALENDAR_CONFIG: '📆 Calendrier Comms',
     CALENDAR: '📆 Calendar Sync',
-    EXPORTS: '📤 Exports',
-    ADMIN_WEB: '🖥️ Admin Web'
+    EXPORTS: '📤 Exports'
   },
   HEADER_ROW: 4,
   DATA_START_ROW: 5,
@@ -66,8 +65,7 @@ var FBR = {
     '🧾 Logs',
     '📆 Calendrier Comms',
     '📆 Calendar Sync',
-    '📤 Exports',
-    '🖥️ Admin Web'
+    '📤 Exports'
   ],
   ADMIN_HEADERS: {
     CHECKS: ['Horodatage', 'Bloc', 'Niveau', 'Ligne source', 'Champ', 'Problème', 'Action corrective', 'Responsable', 'Statut', 'Notes'],
@@ -75,7 +73,6 @@ var FBR = {
     CALENDAR_CONFIG: ['Paramètre', 'Valeur', 'Notes'],
     CALENDAR: ['Horodatage', 'Mode', 'Date publication', 'Canal', 'Titre événement', 'Statut contenu', 'Calendar ID', 'Event ID', 'Action', 'Résultat', 'Ligne source', 'URL publiée', 'Notes'],
     EXPORTS: ['Horodatage', 'Type export', 'Période', 'Source', 'Format', 'Mode', 'Statut', 'Lien fichier', 'Responsable', 'Notes'],
-    ADMIN_WEB: ['Bloc', 'Statut', 'Lien / valeur', 'Usage', 'Priorité', 'Notes'],
     PLANNING_RULES: ['Canal', 'Type contenu', 'Jours autorisés', 'Jours interdits', 'Créneau principal', 'Créneau secours', 'Durée événement min', 'Règle stricte', 'Max / semaine', 'Délai validation avant envoi', 'Priorité', 'Source / logique', 'Notes']
   }
 };
@@ -88,6 +85,7 @@ var FBR_CALENDAR_DEFAULTS = {
 };
 
 
+/** Constantes legacy calendrier/liens, sans création d’onglet ni Web App HEAD. */
 var FBR_ADMIN_WEB_DEFAULTS = {
   CALENDAR_ID: 'c_5ded6172d45bbaaa6389eda318fce1893fb8f5f5e32df1eaa0af4a2cfd90aac9@group.calendar.google.com',
   CALENDAR_EMBED_URL: 'https://calendar.google.com/calendar/embed?src=c_5ded6172d45bbaaa6389eda318fce1893fb8f5f5e32df1eaa0af4a2cfd90aac9%40group.calendar.google.com&ctz=Europe%2FParis',
