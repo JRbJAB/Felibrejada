@@ -21,6 +21,11 @@ function FBR_getAdminWebState_() {
 }
 
 function FBR_doGetAdminWeb_(e) {
+  var view = e && e.parameter ? String(e.parameter.view || '').toLowerCase() : '';
+  if (view === 'plan-communication' || view === 'plan-com') {
+    return FBR_PLAN_COMM_getStandaloneWebOutput_();
+  }
+
   var tpl = HtmlService.createTemplateFromFile('12_AdminWeb');
   tpl.stateJson = JSON.stringify(FBR_getAdminWebState_());
   return tpl.evaluate()

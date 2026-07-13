@@ -1,6 +1,6 @@
 /**
  * 03_Menu_UI.gs — menu métiers + sidebar router.
- * Version: v0.5-current-recheck-20260711
+ * Version: v0.6-plan-com-standalone-webapp-current-20260712
  * Base auditée: fichier utilisateur "Code collé.js".
  * Contraintes:
  * - aucun onOpen ajouté ici ; onOpen(e) reste dans 00_Code.gs et appelle FBR_onOpen(e)
@@ -18,6 +18,7 @@ function FBR_onOpen(e) {
     .addSeparator()
     .addItem('🧠 Carte mentale COM — plein écran', 'FELIBREE_openCarteMentaleComFullscreen')
     .addItem('🎯 Plan communication — timeline HTML', 'FELIBREE_openPlanCommunicationTimeline')
+    .addItem('🌐 Plan communication — onglet Chrome', 'FELIBREE_openPlanCommunicationHtmlTab')
     .addSeparator()
     .addItem('🖥️ Admin web / calendrier intégré', 'FELIBREE_openAdminWeb');
 
@@ -28,6 +29,7 @@ function FBR_onOpen(e) {
 
   var communicationMenu = ui.createMenu('📣 Communication')
     .addItem('🎯 Plan communication — timeline HTML', 'FELIBREE_openPlanCommunicationTimeline')
+    .addItem('🌐 Plan communication — onglet Chrome', 'FELIBREE_openPlanCommunicationHtmlTab')
     .addItem('🎯 Plan communication — UI dry-run', 'FELIBREE_planCommunicationTimelineDryRun')
     .addItem('🎯 Plan communication — APPLY protégé', 'FELIBREE_planCommunicationTimelineApply')
     .addSeparator()
@@ -222,6 +224,9 @@ function FBR_sidebarAction_(action) {
 
     case 'plan-communication-open':
       return FBR_PLAN_COMM_showTimelineDialog_();
+
+    case 'plan-communication-standalone':
+      return FBR_PLAN_COMM_openStandaloneTab_();
 
     case 'plan-communication-dry-run':
       return FBR_PLAN_COMM_uiStrictDryRun_();

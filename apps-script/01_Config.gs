@@ -1,4 +1,4 @@
-var FELIBREE_SCRIPT_VERSION = 'felibree-strict-ui-automation-v0.6.3-plan-comm-html-state-bridge-20260711';
+var FELIBREE_SCRIPT_VERSION = 'felibree-strict-ui-automation-v0.6.4-plan-com-standalone-webapp-current-20260712';
 
 var FBR = {
   SHEETS: {

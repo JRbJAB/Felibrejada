@@ -6,13 +6,16 @@
  * Only APPLY scope: '🎯 Plan Communication 2027'!A28:T52 (UI/timeline only).
  */
 
-var FBR_PLAN_COMM_TIMELINE_VERSION = 'v0.2.0-html-state-bridge-20260711';
+var FBR_PLAN_COMM_TIMELINE_VERSION = 'v0.4.0-standalone-webapp-current-20260712';
 var FBR_PLAN_COMM_TIMELINE_CFG = {
+  SPREADSHEET_ID: '1TR1E3H7bp6dCv7QFEpPiFN44R4lJuVNlml2TgXnC4xo',
   SHEET_NAME: '🎯 Plan Communication 2027',
   SOURCE_RANGE: 'A5:T25',
   UI_RANGE: 'A28:T52',
   PROPERTY_ALLOW_WRITE: 'FELIBREE_ALLOW_PLAN_COM_UI_WRITE',
-  HTML_FILE: 'FBR_PLAN_COMM_TIMELINE_HTML_20260711_v0_1',
+  HTML_FILE: 'PLAN_COMM_TIMELINE_HTML',
+  STANDALONE_HTML_FILE: 'PLAN_COMM_STANDALONE_WEB',
+  WEB_VIEW_PARAM: 'plan-communication',
   MONTHS: ['Juil. 26','Août 26','Sept. 26','Oct. 26','Nov. 26','Déc. 26','Janv. 27','Fév. 27','Mars 27','Avr. 27','Mai 27','Juin 27','Juil. 27'],
   MAP: {
   "PLAN-COM-001": {
@@ -122,8 +125,59 @@ function FBR_PLAN_COMM_showTimelineDialog_() {
   return {ok:true, opened:true, version:FBR_PLAN_COMM_TIMELINE_VERSION, mode:'READ_ONLY'};
 }
 
+function FBR_PLAN_COMM_getSpreadsheet_() {
+  var active = SpreadsheetApp.getActiveSpreadsheet();
+  if (active) return active;
+  return SpreadsheetApp.openById(FBR_PLAN_COMM_TIMELINE_CFG.SPREADSHEET_ID);
+}
+
+function FBR_PLAN_COMM_getStandaloneWebUrl_() {
+  var baseUrl =
+    FBR_getScriptProperty_(FBR.PROP.ADMIN_WEB_URL, '') ||
+    (typeof FBR_ADMIN_WEB_DEFAULTS !== 'undefined' ? FBR_ADMIN_WEB_DEFAULTS.ADMIN_WEB_URL : '') ||
+    ScriptApp.getService().getUrl();
+
+  if (!baseUrl) return '';
+  var separator = baseUrl.indexOf('?') >= 0 ? '&' : '?';
+  return baseUrl + separator + 'view=' + encodeURIComponent(FBR_PLAN_COMM_TIMELINE_CFG.WEB_VIEW_PARAM);
+}
+
+function FBR_PLAN_COMM_getStandaloneWebOutput_() {
+  var state = FBR_PLAN_COMM_getTimelineState_();
+  state.mode = 'WEB_APP_LIVE_READ_ONLY';
+  state.generatedAt = new Date().toISOString();
+  state.standaloneUrl = FBR_PLAN_COMM_getStandaloneWebUrl_();
+
+  var tpl = HtmlService.createTemplateFromFile(FBR_PLAN_COMM_TIMELINE_CFG.STANDALONE_HTML_FILE);
+  tpl.stateJson = JSON.stringify(state).replace(/</g, '\\u003c');
+  return tpl.evaluate()
+    .setTitle('Félibrée 2027 — Plan Communication')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function FBR_PLAN_COMM_openStandaloneTab_() {
+  var url = FBR_PLAN_COMM_getStandaloneWebUrl_();
+  if (!url) {
+    throw new Error('URL Web App introuvable. Mettre à jour le déploiement existant ou définir ' + FBR.PROP.ADMIN_WEB_URL + '.');
+  }
+
+  var safeUrl = String(url).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  var html = HtmlService.createHtmlOutput(
+    '<!doctype html><html><head><base target="_blank"><meta charset="utf-8">' +
+    '<style>body{font-family:Arial,sans-serif;padding:18px;color:#172437}a{display:block;background:#1e6fb5;color:#fff;text-decoration:none;font-weight:bold;text-align:center;padding:14px;border-radius:8px;margin:14px 0}p{font-size:12px;color:#5d6a78}</style></head><body>' +
+    '<h2>🌐 Plan Communication — HTML live</h2>' +
+    '<a id="openPlanCom" href="' + safeUrl + '" target="_blank" rel="noopener">OUVRIR DANS UN NOUVEL ONGLET CHROME</a>' +
+    '<p>La fenêtre tente l’ouverture automatique. Si Chrome la bloque, cliquer sur le bouton bleu.</p>' +
+    '<script>setTimeout(function(){var w=window.open("' + safeUrl + '","_blank");if(w){google.script.host.close();}},120);</script>' +
+    '</body></html>'
+  ).setWidth(520).setHeight(250);
+
+  SpreadsheetApp.getUi().showModalDialog(html, '🌐 Ouvrir le Plan Communication HTML');
+  return {ok:true, mode:'OPEN_NEW_TAB', url:url, version:FBR_PLAN_COMM_TIMELINE_VERSION};
+}
+
 function FBR_PLAN_COMM_getTimelineState_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = FBR_PLAN_COMM_getSpreadsheet_();
   var sh = ss.getSheetByName(FBR_PLAN_COMM_TIMELINE_CFG.SHEET_NAME);
   if (!sh) throw new Error('Onglet introuvable : ' + FBR_PLAN_COMM_TIMELINE_CFG.SHEET_NAME);
   var values = sh.getRange(FBR_PLAN_COMM_TIMELINE_CFG.SOURCE_RANGE).getDisplayValues();
@@ -177,6 +231,8 @@ function FBR_PLAN_COMM_getTimelineState_() {
     sheetName: sh.getName(),
     sheetId: sh.getSheetId(),
     spreadsheetUrl: ss.getUrl() + '#gid=' + sh.getSheetId(),
+    generatedAt: new Date().toISOString(),
+    standaloneUrl: FBR_PLAN_COMM_getStandaloneWebUrl_(),
     months: FBR_PLAN_COMM_TIMELINE_CFG.MONTHS,
     counts: counts,
     items: items,
@@ -188,7 +244,8 @@ function FBR_PLAN_COMM_getTimelineState_() {
       noBusinessDataWrite: true,
       noMenuOverride: true,
       noOnOpen: true,
-      noDoGet: true
+      noDoGetOverride: true,
+      webRoute: '?view=' + FBR_PLAN_COMM_TIMELINE_CFG.WEB_VIEW_PARAM
     }
   };
 }

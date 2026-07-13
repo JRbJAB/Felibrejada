@@ -60,6 +60,14 @@ function FELIBREE_openPlanCommunicationTimeline() {
   return FBR_PLAN_COMM_showTimelineDialog_();
 }
 
+function FELIBREE_openPlanCommunicationHtmlTab() {
+  return FBR_PLAN_COMM_openStandaloneTab_();
+}
+
+function FELIBREE_getPlanCommunicationHtmlUrl() {
+  return FBR_PLAN_COMM_getStandaloneWebUrl_();
+}
+
 function FELIBREE_getPlanCommunicationTimelineState() {
   return FBR_PLAN_COMM_getTimelineState_();
 }
