@@ -25,11 +25,14 @@ function FBR_onOpen(e) {
     .addItem('📰 Relances presse dues', 'FELIBREE_showPressDue');
 
   var meetingMenu = ui.createMenu('📝 Réunions & registres')
+    .addItem('📅 Ouvrir le registre des réunions', 'FELIBREE_openMeetingRegistry')
     .addItem('📌 Ouvrir Réunions & PV', 'FELIBREE_openMeetingReport')
-    .addItem('➕ Créer un bloc de réunion', 'FELIBREE_createMeetingBlock')
+    .addSeparator()
+    .addItem('➕ Créer une réunion + son bloc PV', 'FELIBREE_createMeetingBlock')
     .addItem('🔗 Créer uniquement les décisions/actions manquantes', 'FELIBREE_integrateMeetingMissingRecords')
     .addSeparator()
-    .addItem('🔎 Auditer l’architecture', 'FELIBREE_auditMeetingArchitecture')
+    .addItem('🧩 Installer/réparer les types multiples', 'FELIBREE_installMeetingRegistry')
+    .addItem('🔎 Auditer l’architecture complète', 'FELIBREE_auditMeetingArchitecture')
     .addItem('🔒 Sécuriser les colonnes AUTO', 'FELIBREE_secureMeetingAutoColumns');
 
   var communicationMenu = ui.createMenu('📣 Communication')
