@@ -766,19 +766,61 @@ function FBR_CARTE_MENTALE_REGISTRY_updateMapRegistry_(fileUrl, state) {
  * À appeler depuis le menu Google Sheet ou la sidebar, pas depuis l’éditeur Apps Script.
  */
 function FELIBREE_openCarteMentaleComFullscreen() {
-  return FBR_CARTE_MENTALE_COM_ENGINE.openFullscreen();
+  return FBR_runLoggedAction_({
+    functionName: 'FELIBREE_openCarteMentaleComFullscreen',
+    mode: 'UI_READ_ONLY',
+    sheetName: '🧠 Cartes & Assets HTML',
+    rowsRead: 1,
+    rowsChanged: 0,
+    successMessage: function (result) {
+      return result && result.message ? result.message : 'Carte mentale ouverte.';
+    }
+  }, function () {
+    return FBR_CARTE_MENTALE_COM_ENGINE.openFullscreen();
+  });
 }
 
 /**
  * Fonction réelle n°2 — diagnostic lançable depuis l’éditeur Apps Script.
  */
 function FELIBREE_carteMentaleComDiagnostic() {
-  return FBR_CARTE_MENTALE_COM_ENGINE.diagnostic();
+  return FBR_runLoggedAction_({
+    functionName: 'FELIBREE_carteMentaleComDiagnostic',
+    mode: 'DIAGNOSTIC',
+    sheetName: '🧠 Cartes & Assets HTML',
+    rowsRead: function (result) {
+      return result && result.stateSummary && result.stateSummary.blocks ?
+        result.stateSummary.blocks : 0;
+    },
+    rowsChanged: 0,
+    successMessage: function (result) {
+      return 'Diagnostic carte mentale : ok=' + Boolean(result && result.ok) +
+        ', template=' + Boolean(result && result.templateFound) +
+        ', static=' + Boolean(result && result.staticProTemplateFound) + '.';
+    }
+  }, function () {
+    return FBR_CARTE_MENTALE_COM_ENGINE.diagnostic();
+  });
 }
 
 /**
  * Fonction réelle n°3 — dry-run de mise à jour des blocs depuis les données validées.
  */
 function FELIBREE_refreshCarteMentaleComDryRun() {
-  return FBR_CARTE_MENTALE_COM_ENGINE.dryRun();
+  return FBR_runLoggedAction_({
+    functionName: 'FELIBREE_refreshCarteMentaleComDryRun',
+    mode: 'DRY_RUN',
+    sheetName: '🧠 Cartes & Assets HTML',
+    rowsRead: function (result) {
+      return result && result.changedBlocksPreview ? result.changedBlocksPreview.length : 0;
+    },
+    rowsChanged: 0,
+    successMessage: function (result) {
+      return 'Carte mentale dry-run : ' +
+        (result && result.changedBlocksPreview ? result.changedBlocksPreview.length : 0) +
+        ' bloc(s), aucune écriture.';
+    }
+  }, function () {
+    return FBR_CARTE_MENTALE_COM_ENGINE.dryRun();
+  });
 }

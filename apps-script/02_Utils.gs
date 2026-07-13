@@ -139,6 +139,7 @@ function FBR_writeBody_(sheetName, rows, width) {
 
 function FBR_log_(entry) {
   try {
+    entry = entry || {};
     var now = new Date();
     var row = [
       now,
@@ -149,17 +150,141 @@ function FBR_log_(entry) {
       entry.sheetName || '',
       entry.rowsRead || 0,
       entry.rowsChanged || 0,
-      entry.message || '',
+      FBR_logSafeText_(entry.message || ''),
       entry.startMs ? Date.now() - entry.startMs : '',
       FELIBREE_SCRIPT_VERSION,
       entry.traceId || FBR_traceId_(),
-      entry.notes || ''
+      FBR_logSafeText_(entry.notes || '')
     ];
     FBR_appendRows_(FBR.SHEETS.LOGS, [row]);
   } catch (err) {
     console.log('FBR_log_ failed: ' + err.message);
   }
 }
+
+function FBR_logSafeText_(value) {
+  if (value === null || value === undefined) return '';
+  var text = String(value);
+  text = text.replace(/(Bearer\s+)[A-Za-z0-9._~+\/=\-]+/gi, '$1[REDACTED]');
+  text = text.replace(/([?&](?:key|token|access_token|api_key|password)=)[^&\s]+/gi, '$1[REDACTED]');
+  if (text.length > 45000) text = text.slice(0, 45000) + '…[TRUNCATED]';
+  return text;
+}
+
+function FBR_loggedActionResolve_(value, result, context, fallbackValue) {
+  try {
+    if (typeof value === 'function') return value(result, context);
+    if (value !== undefined && value !== null) return value;
+  } catch (err) {
+    console.log('FBR_loggedActionResolve_ failed: ' + err.message);
+  }
+  return fallbackValue;
+}
+
+function FBR_loggedActionStatus_(result, fallbackStatus) {
+  if (result && Number(result.failedCount || 0) > 0) return 'ERROR';
+  if (result && result.ok === false) return 'ERROR';
+  if (result && result.status) return String(result.status);
+  return fallbackStatus || 'OK';
+}
+
+function FBR_loggedActionMessage_(result, fallbackMessage) {
+  if (result) {
+    if (result.details) return String(result.details);
+    if (result.message) return String(result.message);
+    if (result.note) return String(result.note);
+    if (result.title) return String(result.title);
+    if (result.label) return String(result.label);
+  }
+  return fallbackMessage || 'Action terminée.';
+}
+
+/**
+ * Exécute une action avec journal central homogène.
+ *
+ * Options utiles :
+ * - functionName, mode, sheetName
+ * - logStart (false par défaut)
+ * - logSuccess (true par défaut ; false pour les fonctions qui loguent déjà leur succès)
+ * - rowsRead / rowsChanged : nombre ou fonction(result, context)
+ * - successStatus / successMessage / notes : valeur ou fonction(result, context)
+ *
+ * Toute exception produit une ligne ERROR puis est relancée.
+ */
+function FBR_runLoggedAction_(options, action) {
+  options = options || {};
+  if (typeof action !== 'function') throw new Error('Action callback manquante.');
+
+  var context = {
+    startMs: Date.now(),
+    traceId: options.traceId || FBR_traceId_()
+  };
+  var functionName = options.functionName || 'FBR_runLoggedAction_';
+  var mode = options.mode || 'SAFE';
+  var sheetName = options.sheetName || FBR.SHEETS.LOGS;
+
+  if (options.logStart === true) {
+    FBR_log_({
+      functionName: functionName,
+      mode: mode,
+      status: 'START',
+      sheetName: sheetName,
+      rowsRead: 0,
+      rowsChanged: 0,
+      message: FBR_loggedActionResolve_(options.startMessage, null, context, 'Action démarrée.'),
+      startMs: context.startMs,
+      traceId: context.traceId,
+      notes: FBR_loggedActionResolve_(options.notes, null, context, '')
+    });
+  }
+
+  try {
+    var result = action(context);
+
+    if (options.logSuccess !== false) {
+      FBR_log_({
+        functionName: functionName,
+        mode: mode,
+        status: FBR_loggedActionResolve_(
+          options.successStatus,
+          result,
+          context,
+          FBR_loggedActionStatus_(result, 'OK')
+        ),
+        sheetName: sheetName,
+        rowsRead: Number(FBR_loggedActionResolve_(options.rowsRead, result, context, 0) || 0),
+        rowsChanged: Number(FBR_loggedActionResolve_(options.rowsChanged, result, context, 0) || 0),
+        message: FBR_loggedActionResolve_(
+          options.successMessage,
+          result,
+          context,
+          FBR_loggedActionMessage_(result, 'Action terminée.')
+        ),
+        startMs: context.startMs,
+        traceId: context.traceId,
+        notes: FBR_loggedActionResolve_(options.notes, result, context, '')
+      });
+    }
+    return result;
+  } catch (err) {
+    var errorText = err && err.message ? err.message : String(err);
+    var errorStack = err && err.stack ? err.stack : errorText;
+    FBR_log_({
+      functionName: functionName,
+      mode: mode,
+      status: 'ERROR',
+      sheetName: sheetName,
+      rowsRead: 0,
+      rowsChanged: 0,
+      message: errorText,
+      startMs: context.startMs,
+      traceId: context.traceId,
+      notes: FBR_loggedActionResolve_(options.errorNotes, null, context, errorStack)
+    });
+    throw err;
+  }
+}
+
 
 function FBR_ensureCoreSheets_() {
   var ss = FBR_ss_();

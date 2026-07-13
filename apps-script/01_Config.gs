@@ -1,4 +1,4 @@
-var FELIBREE_SCRIPT_VERSION = 'felibree-strict-ui-automation-v0.6.5-admin-web-sheet-retirement-current-20260713';
+var FELIBREE_SCRIPT_VERSION = 'felibree-strict-ui-automation-v0.6.6-central-log-coverage-20260713';
 
 var FBR = {
   SHEETS: {

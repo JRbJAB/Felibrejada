@@ -1,6 +1,6 @@
 /**
  * 03_Menu_UI.gs — menu métiers + sidebar router.
- * Version: v0.6.5-admin-web-sheet-retirement-current-20260713
+ * Version: v0.6.6-central-log-coverage-20260713
  * Base auditée: fichier utilisateur "Code collé.js".
  * Contraintes:
  * - aucun onOpen ajouté ici ; onOpen(e) reste dans 00_Code.gs et appelle FBR_onOpen(e)
@@ -103,55 +103,55 @@ function FBR_showSidebar_() {
 function FBR_sidebarAction_(action) {
   switch (action) {
     case 'refresh-cockpit':
-      return FBR_refreshCockpit_();
+      return FELIBREE_refreshCockpit();
 
     case 'quality-checks':
-      return FBR_runQualityChecks_();
+      return FELIBREE_runQualityChecks();
 
     case 'calendar-dedicated-dry-run':
-      return FBR_prepareDedicatedCalendar_(true);
+      return FELIBREE_prepareDedicatedCalendarDryRun();
 
     case 'calendar-dedicated-apply':
-      return FBR_prepareDedicatedCalendar_(false);
+      return FELIBREE_prepareDedicatedCalendarApply();
 
     case 'calendar-share-dry-run':
-      return FBR_shareDedicatedCalendar_(true);
+      return FELIBREE_shareDedicatedCalendarDryRun();
 
     case 'calendar-share-apply':
-      return FBR_shareDedicatedCalendar_(false);
+      return FELIBREE_shareDedicatedCalendarApply();
 
     case 'planning-dry-run':
-      return FBR_applyPlanningRules_(true);
+      return FELIBREE_applyPlanningRulesDryRun();
 
     case 'planning-apply':
-      return FBR_applyPlanningRules_(false);
+      return FELIBREE_applyPlanningRulesApply();
 
     case 'calendar-dry-run':
-      return FBR_syncCalendar_(true);
+      return FELIBREE_syncCalendarDryRun();
 
     case 'calendar-apply':
-      return FBR_syncCalendar_(false);
+      return FELIBREE_syncCalendarApply();
 
     case 'press-due':
-      return FBR_pressDue_(true);
+      return FELIBREE_showPressDue(true);
 
     case 'ia-staging-open':
-      return FBR_iaStagingOpen_();
+      return FELIBREE_openIaStaging();
 
     case 'ia-staging-summary':
-      return FBR_iaStagingSummary_();
+      return FELIBREE_iaStagingSummary();
 
     case 'ia-staging-filter-priority':
-      return FBR_iaStagingFilterByStatus_(FBR_IA_STAGING_UI.STATUS_PRIORITY);
+      return FELIBREE_iaStagingFilterPriority();
 
     case 'ia-staging-filter-context':
-      return FBR_iaStagingFilterByStatus_(FBR_IA_STAGING_UI.STATUS_CONTEXT);
+      return FELIBREE_iaStagingFilterContext();
 
     case 'ia-staging-filter-reject':
-      return FBR_iaStagingFilterByStatus_(FBR_IA_STAGING_UI.STATUS_REJECT);
+      return FELIBREE_iaStagingFilterReject();
 
     case 'ia-staging-clear-filter':
-      return FBR_iaStagingClearFilter_();
+      return FELIBREE_iaStagingClearFilter();
 
     case 'ia-staging-gemini-status':
       return FBR_iaStagingGeminiStatus_();
@@ -166,37 +166,37 @@ function FBR_sidebarAction_(action) {
       return FBR_iaStagingGeminiUrlApply_();
 
     case 'ia-staging-safe-guard':
-      return FBR_iaStagingAssertNoBusinessApply_();
+      return FELIBREE_iaStagingSafeGuard();
 
     case 'registry-verify-dry-run':
-      return FBR_registryVerifyLiveVsBackup_(true);
+      return FELIBREE_registryVerifyLiveVsBackupDryRun();
 
     case 'registry-verify-apply':
-      return FBR_registryVerifyLiveVsBackup_(false);
+      return FELIBREE_registryVerifyLiveVsBackupApply();
 
     case 'registry-open-alerts':
-      return FBR_registryOpenDriftAlerts_();
+      return FELIBREE_registryOpenDriftAlerts();
 
     case 'registry-format-alerts':
-      return FBR_registryApplyConditionalFormatting_();
+      return FELIBREE_registryApplyConditionalFormatting();
 
     case 'source-backup-dry-run':
-      return FBR_backupSourceToDrive_(true);
+      return FELIBREE_backupSourceDryRun();
 
     case 'source-backup-apply':
-      return FBR_backupSourceToDrive_(false);
+      return FELIBREE_backupSourceToDriveApply();
 
     case 'full-backup-dry-run':
-      return FBR_backupDriveClaspGithub_(true);
+      return FELIBREE_backupDriveClaspGithubDryRun();
 
     case 'full-backup-apply':
-      return FBR_backupDriveClaspGithub_(false);
+      return FELIBREE_backupDriveClaspGithubApply();
 
     case 'github-sync-dry-run':
-      return FBR_syncGithubFromLiveSource_(true);
+      return FELIBREE_syncGithubDryRun();
 
     case 'github-sync-apply':
-      return FBR_syncGithubFromLiveSource_(false);
+      return FELIBREE_syncGithubApply();
 
     case 'open-aide-notice':
       return FBR_HELP_STATIC_showSidebar_();
@@ -216,19 +216,19 @@ function FBR_sidebarAction_(action) {
       return FELIBREE_refreshCarteMentaleComDryRun();
 
     case 'plan-communication-open':
-      return FBR_PLAN_COMM_showTimelineDialog_();
+      return FELIBREE_openPlanCommunicationTimeline();
 
     case 'plan-communication-dry-run':
-      return FBR_PLAN_COMM_uiStrictDryRun_();
+      return FELIBREE_planCommunicationTimelineDryRun();
 
     case 'plan-communication-apply':
-      return FBR_PLAN_COMM_uiStrictApply_();
+      return FELIBREE_planCommunicationTimelineApply();
 
     case 'install-triggers':
-      return FBR_installTriggers_();
+      return FELIBREE_installTriggers();
 
     case 'remove-triggers':
-      return FBR_removeTriggers_();
+      return FELIBREE_removeTriggers();
 
     case 'install':
       return FELIBREE_install();

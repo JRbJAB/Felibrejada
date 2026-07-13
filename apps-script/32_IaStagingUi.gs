@@ -155,7 +155,7 @@ function FBR_iaStagingGeminiSearchApply_() {
 }
 
 function FBR_iaStagingGeminiUrlApply_() {
-  return FBR_iaStagingCallIfExists_('FELIBREE_geminiUrlToStagingApply');
+  return FBR_iaStagingCallIfExists_('FELIBREE_geminiUrlContextToStagingApply');
 }
 
 function FBR_iaStagingAssertNoBusinessApply_() {
@@ -169,10 +169,89 @@ function FBR_iaStagingAssertNoBusinessApply_() {
 }
 
 /* Public wrappers for menu items */
-function FELIBREE_openIaStaging() { return FBR_iaStagingOpen_(); }
-function FELIBREE_iaStagingSummary() { return FBR_iaStagingSummary_(); }
-function FELIBREE_iaStagingFilterPriority() { return FBR_iaStagingFilterByStatus_(FBR_IA_STAGING_UI.STATUS_PRIORITY); }
-function FELIBREE_iaStagingFilterContext() { return FBR_iaStagingFilterByStatus_(FBR_IA_STAGING_UI.STATUS_CONTEXT); }
-function FELIBREE_iaStagingFilterReject() { return FBR_iaStagingFilterByStatus_(FBR_IA_STAGING_UI.STATUS_REJECT); }
-function FELIBREE_iaStagingClearFilter() { return FBR_iaStagingClearFilter_(); }
-function FELIBREE_iaStagingSafeGuard() { return FBR_iaStagingAssertNoBusinessApply_(); }
+function FELIBREE_openIaStaging() {
+  return FBR_runLoggedAction_({
+    functionName: 'FELIBREE_openIaStaging',
+    mode: 'UI_READ_ONLY',
+    sheetName: FBR_iaStagingSheetName_(),
+    rowsRead: function (result) { return result && result.dataRows ? result.dataRows : 0; },
+    rowsChanged: 0,
+    successMessage: 'IA Staging ouvert et résumé chargé.'
+  }, function () {
+    return FBR_iaStagingOpen_();
+  });
+}
+function FELIBREE_iaStagingSummary() {
+  return FBR_runLoggedAction_({
+    functionName: 'FELIBREE_iaStagingSummary',
+    mode: 'READ_ONLY',
+    sheetName: FBR_iaStagingSheetName_(),
+    rowsRead: function (result) { return result && result.dataRows ? result.dataRows : 0; },
+    rowsChanged: 0,
+    successMessage: function (result) {
+      return 'Résumé IA Staging : ' + (result && result.dataRows ? result.dataRows : 0) + ' ligne(s).';
+    }
+  }, function () {
+    return FBR_iaStagingSummary_();
+  });
+}
+function FELIBREE_iaStagingFilterPriority() {
+  return FBR_runLoggedAction_({
+    functionName: 'FELIBREE_iaStagingFilterPriority',
+    mode: 'UI_FILTER',
+    sheetName: FBR_iaStagingSheetName_(),
+    rowsRead: function (result) { return result && result.dataRows ? result.dataRows : 0; },
+    rowsChanged: 0,
+    successMessage: 'Filtre IA Staging PRIORITY appliqué.'
+  }, function () {
+    return FBR_iaStagingFilterByStatus_(FBR_IA_STAGING_UI.STATUS_PRIORITY);
+  });
+}
+function FELIBREE_iaStagingFilterContext() {
+  return FBR_runLoggedAction_({
+    functionName: 'FELIBREE_iaStagingFilterContext',
+    mode: 'UI_FILTER',
+    sheetName: FBR_iaStagingSheetName_(),
+    rowsRead: function (result) { return result && result.dataRows ? result.dataRows : 0; },
+    rowsChanged: 0,
+    successMessage: 'Filtre IA Staging CONTEXT appliqué.'
+  }, function () {
+    return FBR_iaStagingFilterByStatus_(FBR_IA_STAGING_UI.STATUS_CONTEXT);
+  });
+}
+function FELIBREE_iaStagingFilterReject() {
+  return FBR_runLoggedAction_({
+    functionName: 'FELIBREE_iaStagingFilterReject',
+    mode: 'UI_FILTER',
+    sheetName: FBR_iaStagingSheetName_(),
+    rowsRead: function (result) { return result && result.dataRows ? result.dataRows : 0; },
+    rowsChanged: 0,
+    successMessage: 'Filtre IA Staging REJECT appliqué.'
+  }, function () {
+    return FBR_iaStagingFilterByStatus_(FBR_IA_STAGING_UI.STATUS_REJECT);
+  });
+}
+function FELIBREE_iaStagingClearFilter() {
+  return FBR_runLoggedAction_({
+    functionName: 'FELIBREE_iaStagingClearFilter',
+    mode: 'UI_FILTER',
+    sheetName: FBR_iaStagingSheetName_(),
+    rowsRead: function (result) { return result && result.dataRows ? result.dataRows : 0; },
+    rowsChanged: 0,
+    successMessage: 'Filtre IA Staging supprimé.'
+  }, function () {
+    return FBR_iaStagingClearFilter_();
+  });
+}
+function FELIBREE_iaStagingSafeGuard() {
+  return FBR_runLoggedAction_({
+    functionName: 'FELIBREE_iaStagingSafeGuard',
+    mode: 'SAFE_GUARD',
+    sheetName: FBR_iaStagingSheetName_(),
+    rowsRead: 0,
+    rowsChanged: 0,
+    successMessage: 'Garde-fou IA Staging vérifié : aucune injection métier.'
+  }, function () {
+    return FBR_iaStagingAssertNoBusinessApply_();
+  });
+}

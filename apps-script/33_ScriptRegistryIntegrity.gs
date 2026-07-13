@@ -416,7 +416,9 @@ function FBR_registryApplyConditionalFormatting_() {
   range.setBackgrounds(backgrounds);
   SpreadsheetApp.flush();
 
-  return FBR_result_(true, 'Registry formatting', 'Alertes recolorées : ' + values.length + ' ligne(s).');
+  var result = FBR_result_(true, 'Registry formatting', 'Alertes recolorées : ' + values.length + ' ligne(s).');
+  result.rowsAffected = values.length;
+  return result;
 }
 
 function FBR_registryOpenDriftAlerts_() {
@@ -441,11 +443,57 @@ function FBR_registryOpenDriftAlerts_() {
     // Older filter states can throw. The sheet is still opened; user can filter manually.
   }
 
-  return FBR_result_(true, 'Registry alertes ouvertes', 'Onglet Script Registry ouvert. Filtre alertes appliqué si possible.');
+  var result = FBR_result_(true, 'Registry alertes ouvertes', 'Onglet Script Registry ouvert. Filtre alertes appliqué si possible.');
+  result.rowsAffected = Math.max(0, lastRow - FBR_SCRIPT_REGISTRY_GATE.HEADER_ROW);
+  return result;
 }
 
 /* Public wrappers for menu and manual runs */
-function FELIBREE_registryVerifyLiveVsBackupDryRun() { return FBR_registryVerifyLiveVsBackup_(true); }
-function FELIBREE_registryVerifyLiveVsBackupApply() { return FBR_registryVerifyLiveVsBackup_(false); }
-function FELIBREE_registryApplyConditionalFormatting() { return FBR_registryApplyConditionalFormatting_(); }
-function FELIBREE_registryOpenDriftAlerts() { return FBR_registryOpenDriftAlerts_(); }
+function FELIBREE_registryVerifyLiveVsBackupDryRun() {
+  return FBR_runLoggedAction_({
+    functionName: 'FELIBREE_registryVerifyLiveVsBackupDryRun',
+    mode: 'DRY_RUN',
+    sheetName: FBR_registrySheetName_(),
+    logSuccess: false
+  }, function () {
+    return FBR_registryVerifyLiveVsBackup_(true);
+  });
+}
+function FELIBREE_registryVerifyLiveVsBackupApply() {
+  return FBR_runLoggedAction_({
+    functionName: 'FELIBREE_registryVerifyLiveVsBackupApply',
+    mode: 'APPLY',
+    sheetName: FBR_registrySheetName_(),
+    logSuccess: false
+  }, function () {
+    return FBR_registryVerifyLiveVsBackup_(false);
+  });
+}
+function FELIBREE_registryApplyConditionalFormatting() {
+  return FBR_runLoggedAction_({
+    functionName: 'FELIBREE_registryApplyConditionalFormatting',
+    mode: 'UI_ACTION',
+    sheetName: FBR_registrySheetName_(),
+    rowsRead: function (result) { return result && result.rowsAffected ? result.rowsAffected : 0; },
+    rowsChanged: function (result) { return result && result.rowsAffected ? result.rowsAffected : 0; },
+    successMessage: function (result) {
+      return result && result.details ? result.details : 'Alertes Registry recolorées.';
+    }
+  }, function () {
+    return FBR_registryApplyConditionalFormatting_();
+  });
+}
+function FELIBREE_registryOpenDriftAlerts() {
+  return FBR_runLoggedAction_({
+    functionName: 'FELIBREE_registryOpenDriftAlerts',
+    mode: 'UI_ACTION',
+    sheetName: FBR_registrySheetName_(),
+    rowsRead: function (result) { return result && result.rowsAffected ? result.rowsAffected : 0; },
+    rowsChanged: 0,
+    successMessage: function (result) {
+      return result && result.details ? result.details : 'Alertes Registry ouvertes.';
+    }
+  }, function () {
+    return FBR_registryOpenDriftAlerts_();
+  });
+}
