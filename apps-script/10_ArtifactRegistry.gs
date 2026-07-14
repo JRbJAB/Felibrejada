@@ -5,7 +5,7 @@
  */
 
 var FBR_ARTIFACT = {
-  VERSION: 'v1.0.2-20260714-ACCESSIBLE-REPORTS',
+  VERSION: 'v1.0.5-20260714-PRIVATE-VAULT-REST-PERMISSIONS',
   CLASSES: ['RELEASE', 'BACKUP_SCRIPT', 'BACKUP_SHEET', 'PACK', 'LIVRABLE', 'DOCUMENTATION', 'EXPORT', 'MIRROR_GITHUB_SEUL', 'SNAPSHOT', 'ARCHIVE'],
   STATUSES: ['CANONIQUE', 'VALIDÉ_LIVE', 'PRÊT_NON_LIVE', 'PARTIEL', 'À_REVOIR', 'REMPLACÉ', 'ARCHIVÉ', 'À_PURGER', 'ERREUR'],
   CONSERVATION: ['PERMANENTE', '30_DERNIERS', 'JALON', 'LEGACY_À_REVOIR', 'PURGE_APRÈS_REVUE'],
@@ -37,6 +37,43 @@ function FELIBREE_verifyLastArtifactReportAccess() {
     var access = FBR_probeArtifactReportById_(id);
     if (!access.ok) throw new Error('Rapport introuvable ou illisible : ' + access.details);
     return FBR_result_(true, 'Rapport Artifact Registry accessible', access.details);
+  });
+}
+
+function FELIBREE_hardenArtifactRegistryStorageDryRun() {
+  return FBR_runLoggedAction_({
+    functionName: 'FELIBREE_hardenArtifactRegistryStorageDryRun',
+    mode: 'SECURITY_HARDENING_DRY_RUN',
+    sheetName: FBR.SHEETS.LOGS,
+    logStart: true
+  }, function () {
+    var preview = FBR_previewArtifactRegistryStorageHardening_();
+    return FBR_result_(true, 'Prévisualisation coffre Artifact Registry', preview.details);
+  });
+}
+
+function FELIBREE_hardenArtifactRegistryStorageApply() {
+  return FBR_runLoggedAction_({
+    functionName: 'FELIBREE_hardenArtifactRegistryStorageApply',
+    mode: 'SECURITY_HARDENING',
+    sheetName: FBR.SHEETS.LOGS,
+    logStart: true
+  }, function (context) {
+    var hardened = FBR_hardenArtifactRegistryStorage_(context.traceId);
+    return FBR_result_(true, 'Coffre Artifact Registry sécurisé', hardened.details);
+  });
+}
+
+function FELIBREE_verifyArtifactRegistryStorageSecurity() {
+  return FBR_runLoggedAction_({
+    functionName: 'FELIBREE_verifyArtifactRegistryStorageSecurity',
+    mode: 'READ_ONLY_SECURITY_VERIFY',
+    sheetName: FBR.SHEETS.LOGS,
+    logStart: true
+  }, function () {
+    var verify = FBR_verifyArtifactRegistryStorageSecurity_();
+    if (!verify.ok) throw new Error(verify.details);
+    return FBR_result_(true, 'Stockage Artifact Registry privé vérifié', verify.details);
   });
 }
 
@@ -684,15 +721,18 @@ function FBR_inferCanonical_(canonicalText, statusText) {
 function FBR_createArtifactSnapshot_(traceId) {
   var spreadsheetId = FBR_ss_().getId();
   var stamp = Utilities.formatDate(new Date(), FBR_CALENDAR_DEFAULTS.TIME_ZONE, 'yyyyMMdd_HHmmss');
-  var folder = DriveApp.getFolderById(FBR_getScriptProperty_(FBR.PROP.SOURCE_BACKUP_FOLDER_ID, FBR_SOURCE_BACKUP_DEFAULTS.FOLDER_ID));
+  var vault = FBR_getArtifactPrivateVault_();
+  var folder = vault.folder;
   var sourceFile = DriveApp.getFileById(spreadsheetId);
   var copyName = 'felibree_sheet_pre_artifact_change_' + stamp + '_' + traceId;
   var spreadsheetCopy = sourceFile.makeCopy(copyName, folder);
+  FBR_forcePrivateArtifactFile_(spreadsheetCopy);
   var payload = {
     version: FBR_ARTIFACT.VERSION,
     createdAt: new Date().toISOString(),
     traceId: traceId,
     spreadsheetId: spreadsheetId,
+    privateVaultId: folder.getId(),
     fullSpreadsheetCopy: {
       id: spreadsheetCopy.getId(),
       url: spreadsheetCopy.getUrl(),
@@ -703,10 +743,14 @@ function FBR_createArtifactSnapshot_(traceId) {
   };
   var name = 'felibree_artifact_registry_premerge_snapshot_' + stamp + '_' + traceId + '.json';
   var file = folder.createFile(name, JSON.stringify(payload, null, 2), MimeType.PLAIN_TEXT);
+  FBR_forcePrivateArtifactFile_(file);
   return {
     id: file.getId(),
     url: file.getUrl(),
     name: name,
+    folderId: folder.getId(),
+    folderUrl: 'https://drive.google.com/drive/folders/' + folder.getId(),
+    privateVerified: true,
     spreadsheetCopyId: spreadsheetCopy.getId(),
     spreadsheetCopyUrl: spreadsheetCopy.getUrl(),
     spreadsheetCopyName: copyName
@@ -782,24 +826,380 @@ function FBR_writeArtifactReport_(plan, dryRun, traceId) {
 }
 
 function FBR_getArtifactReportFolder_() {
-  var explicitId = FBR_getScriptProperty_('FELIBREE_ARTIFACT_REPORT_FOLDER_ID', '');
-  if (explicitId) {
+  return FBR_getArtifactPrivateVault_();
+}
+
+function FBR_getArtifactPrivateVault_() {
+  var props = PropertiesService.getScriptProperties();
+  var propertyName = 'FELIBREE_ARTIFACT_PRIVATE_FOLDER_ID';
+  var existingId = FBR_safeText_(props.getProperty(propertyName));
+  if (existingId) {
     try {
-      return { folder: DriveApp.getFolderById(explicitId), source: 'SCRIPT_PROPERTY' };
-    } catch (explicitErr) {
-      console.log('FBR_getArtifactReportFolder_ explicit folder failed: ' + explicitErr.message);
+      var existing = DriveApp.getFolderById(existingId);
+      FBR_forcePrivateArtifactFolder_(existing);
+      props.setProperty('FELIBREE_ARTIFACT_REPORT_FOLDER_ID', existing.getId());
+      return { folder: existing, source: 'PRIVATE_ROOT_VAULT' };
+    } catch (existingErr) {
+      console.log('FBR private vault property invalid: ' + existingErr.message);
+      props.deleteProperty(propertyName);
     }
+  }
+
+  var root = DriveApp.getRootFolder();
+  var name = '🔒 FELIBREE 2027 — Artifact Registry privé';
+  var matches = root.getFoldersByName(name);
+  var folder = matches.hasNext() ? matches.next() : root.createFolder(name);
+  if (matches.hasNext()) {
+    throw new Error('Plusieurs coffres Artifact Registry privés portent le même nom. Renseigner ' + propertyName + ' avec l’ID canonique.');
+  }
+  FBR_forcePrivateArtifactFolder_(folder);
+  props.setProperty(propertyName, folder.getId());
+  props.setProperty('FELIBREE_ARTIFACT_REPORT_FOLDER_ID', folder.getId());
+  return { folder: folder, source: 'PRIVATE_ROOT_VAULT' };
+}
+
+function FBR_driveApiJson_(method, url, payload) {
+  var options = {
+    method: method,
+    muteHttpExceptions: true,
+    headers: {
+      Authorization: 'Bearer ' + ScriptApp.getOAuthToken(),
+      Accept: 'application/json'
+    }
+  };
+  if (payload !== undefined && payload !== null) {
+    options.contentType = 'application/json';
+    options.payload = JSON.stringify(payload);
+  }
+  var response = UrlFetchApp.fetch(url, options);
+  var code = response.getResponseCode();
+  var text = response.getContentText() || '';
+  if (code < 200 || code >= 300) {
+    throw new Error('Drive API ' + method + ' HTTP ' + code + ' : ' + text.slice(0, 800));
+  }
+  return text ? JSON.parse(text) : {};
+}
+
+function FBR_driveApiFileSecurity_(fileId) {
+  fileId = FBR_safeText_(fileId);
+  if (!fileId) throw new Error('Drive file ID vide pour audit de sécurité.');
+  var fields = 'id,name,mimeType,parents,permissions(id,type,role,emailAddress,domain,allowFileDiscovery,permissionDetails)';
+  var url = 'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) +
+    '?supportsAllDrives=true&fields=' + encodeURIComponent(fields);
+  var data = FBR_driveApiJson_('get', url, null);
+  var permissions = data.permissions || [];
+  var nonOwner = [];
+  permissions.forEach(function (permission) {
+    if (FBR_safeText_(permission.role).toLowerCase() === 'owner') return;
+    var details = permission.permissionDetails || [];
+    var inherited = false;
+    details.forEach(function (detail) {
+      if (detail && detail.inherited === true) inherited = true;
+    });
+    nonOwner.push({
+      id: FBR_safeText_(permission.id),
+      type: FBR_safeText_(permission.type),
+      role: FBR_safeText_(permission.role),
+      emailAddress: FBR_safeText_(permission.emailAddress),
+      domain: FBR_safeText_(permission.domain),
+      inherited: inherited,
+      allowFileDiscovery: permission.allowFileDiscovery === true
+    });
+  });
+  var publicPermissions = nonOwner.filter(function (permission) {
+    return permission.type === 'anyone' || permission.type === 'domain';
+  });
+  return {
+    id: fileId,
+    name: FBR_safeText_(data.name),
+    mimeType: FBR_safeText_(data.mimeType),
+    parents: data.parents || [],
+    permissions: permissions,
+    nonOwner: nonOwner,
+    publicPermissions: publicPermissions,
+    ownerOnly: nonOwner.length === 0,
+    summary: nonOwner.length === 0 ? 'OWNER_ONLY' : nonOwner.map(function (permission) {
+      var principal = permission.emailAddress || permission.domain || permission.type || 'inconnu';
+      return principal + ':' + permission.role + (permission.inherited ? ':HERITE' : ':EXPLICITE');
+    }).join(', ')
+  };
+}
+
+function FBR_driveApiDeletePermission_(fileId, permissionId) {
+  var url = 'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) +
+    '/permissions/' + encodeURIComponent(permissionId) + '?supportsAllDrives=true';
+  FBR_driveApiJson_('delete', url, null);
+}
+
+function FBR_hardenArtifactPermissionsById_(fileId) {
+  var before = FBR_driveApiFileSecurity_(fileId);
+  var failures = [];
+  before.nonOwner.forEach(function (permission) {
+    if (permission.inherited) return;
+    if (!permission.id) {
+      failures.push('permission sans ID : ' + (permission.emailAddress || permission.domain || permission.type));
+      return;
+    }
+    try {
+      FBR_driveApiDeletePermission_(fileId, permission.id);
+    } catch (err) {
+      failures.push(permission.id + ': ' + (err && err.message ? err.message : String(err)));
+    }
+  });
+  var after = FBR_driveApiFileSecurity_(fileId);
+  if (failures.length || !after.ownerOnly) {
+    throw new Error('Durcissement permissions incomplet pour ' + fileId +
+      ' ; suppressions=' + (failures.length ? failures.join(' | ') : 'OK') +
+      ' ; droits restants=' + after.summary);
+  }
+  return after;
+}
+
+function FBR_forcePrivateArtifactFolder_(folder) {
+  var audit = FBR_hardenArtifactPermissionsById_(folder.getId());
+  if (!audit.ownerOnly) {
+    throw new Error('Le coffre Artifact Registry n’est pas propriétaire-seul : ' + audit.summary + ' ; dossier=' + folder.getId());
+  }
+  return true;
+}
+
+function FBR_forcePrivateArtifactFile_(file) {
+  var audit = FBR_hardenArtifactPermissionsById_(file.getId());
+  if (!audit.ownerOnly) {
+    throw new Error('Le fichier Artifact Registry n’est pas propriétaire-seul : ' + audit.summary + ' ; fichier=' + file.getId());
+  }
+  return true;
+}
+
+function FBR_isArtifactTechnicalFileName_(name) {
+  return /^(felibree_artifact_merge_|felibree_artifact_report_REPUBLISHED_|felibree_artifact_registry_premerge_snapshot_|felibree_sheet_pre_artifact_change_)/i.test(FBR_safeText_(name));
+}
+
+function FBR_fileHasParent_(file, folderId) {
+  var parents = file.getParents();
+  while (parents.hasNext()) {
+    if (parents.next().getId() === folderId) return true;
+  }
+  return false;
+}
+
+function FBR_moveArtifactFileToVault_(file, vaultFolder) {
+  var moved = false;
+  if (!FBR_fileHasParent_(file, vaultFolder.getId())) {
+    file.moveTo(vaultFolder);
+    moved = true;
+  }
+  FBR_forcePrivateArtifactFile_(file);
+  if (!FBR_fileHasParent_(file, vaultFolder.getId())) {
+    throw new Error('Déplacement vers le coffre non confirmé pour ' + file.getId());
+  }
+  return moved;
+}
+
+function FBR_collectArtifactFilesFromFolder_(folder, byId) {
+  if (!folder) return;
+  var files = folder.getFiles();
+  while (files.hasNext()) {
+    var file = files.next();
+    if (FBR_isArtifactTechnicalFileName_(file.getName())) byId[file.getId()] = file;
+  }
+}
+
+function FBR_previewArtifactRegistryStorageHardening_() {
+  var privateFolderId = FBR_getScriptProperty_('FELIBREE_ARTIFACT_PRIVATE_FOLDER_ID', '');
+  var byId = {};
+  var folders = {};
+
+  function addFolder(folder) {
+    if (folder) folders[folder.getId()] = folder;
+  }
+  function addFileId(id) {
+    id = FBR_safeText_(id);
+    if (!id || byId[id]) return;
+    try { byId[id] = DriveApp.getFileById(id); } catch (err) { console.log('FBR hardening preview lookup failed ' + id + ': ' + err.message); }
   }
 
   try {
     var parents = DriveApp.getFileById(FBR_ss_().getId()).getParents();
-    if (parents.hasNext()) return { folder: parents.next(), source: 'SPREADSHEET_PARENT' };
+    while (parents.hasNext()) addFolder(parents.next());
   } catch (parentErr) {
-    console.log('FBR_getArtifactReportFolder_ spreadsheet parent failed: ' + parentErr.message);
+    console.log('FBR hardening preview spreadsheet parents failed: ' + parentErr.message);
+  }
+  try {
+    addFolder(DriveApp.getFolderById(FBR_getScriptProperty_(FBR.PROP.SOURCE_BACKUP_FOLDER_ID, FBR_SOURCE_BACKUP_DEFAULTS.FOLDER_ID)));
+  } catch (backupFolderErr) {
+    console.log('FBR hardening preview source backup folder failed: ' + backupFolderErr.message);
+  }
+  var legacyReportFolderId = FBR_getScriptProperty_('FELIBREE_ARTIFACT_REPORT_FOLDER_ID', '');
+  if (legacyReportFolderId) {
+    try { addFolder(DriveApp.getFolderById(legacyReportFolderId)); } catch (legacyFolderErr) { console.log('FBR hardening preview legacy folder failed: ' + legacyFolderErr.message); }
+  }
+  Object.keys(folders).forEach(function (id) { FBR_collectArtifactFilesFromFolder_(folders[id], byId); });
+  addFileId(FBR_getScriptProperty_(FBR.PROP.ARTIFACT_MERGE_LAST_REPORT_ID, ''));
+  addFileId(FBR_getScriptProperty_(FBR.PROP.ARTIFACT_MERGE_LAST_SNAPSHOT_ID, ''));
+  addFileId(FBR_findLatestArtifactReportIdFromLogs_());
+
+  var targets = [];
+  Object.keys(byId).forEach(function (id) {
+    var file = byId[id];
+    if (!FBR_isArtifactTechnicalFileName_(file.getName())) return;
+    var audit;
+    var auditError = '';
+    try {
+      audit = FBR_driveApiFileSecurity_(id);
+    } catch (err) {
+      auditError = err && err.message ? err.message : String(err);
+      audit = { ownerOnly: false, summary: 'AUDIT_INDISPONIBLE' };
+    }
+    var inPrivateFolder = privateFolderId ? FBR_fileHasParent_(file, privateFolderId) : false;
+    targets.push({
+      id: id,
+      name: file.getName(),
+      access: audit.summary,
+      moveRequired: !inPrivateFolder,
+      sharingRequired: !audit.ownerOnly,
+      auditError: auditError
+    });
+  });
+  targets.sort(function (a, b) { return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0); });
+  var previewLines = targets.slice(0, 20).map(function (target) {
+    return target.name + ' [' + target.id + '] droits=' + target.access +
+      ' déplacement=' + (target.moveRequired ? 'OUI' : 'NON') +
+      (target.auditError ? ' audit=' + target.auditError : '');
+  });
+  return {
+    ok: true,
+    details: 'Coffre privé existant=' + (privateFolderId || 'NON — sera créé à la racine Drive') +
+      ' ; fichiers techniques détectés=' + targets.length +
+      ' ; à déplacer=' + targets.filter(function (target) { return target.moveRequired; }).length +
+      ' ; partage à durcir=' + targets.filter(function (target) { return target.sharingRequired; }).length +
+      ' ; audits indisponibles=' + targets.filter(function (target) { return !!target.auditError; }).length +
+      (previewLines.length ? '\n' + previewLines.join('\n') : '') +
+      (targets.length > 20 ? '\n… ' + (targets.length - 20) + ' fichier(s) supplémentaire(s).' : '')
+  };
+}
+
+function FBR_hardenArtifactRegistryStorage_(traceId) {
+  // Capturer l’ancien dossier avant que le coffre privé ne devienne la propriété canonique.
+  var legacyReportFolderId = FBR_getScriptProperty_('FELIBREE_ARTIFACT_REPORT_FOLDER_ID', '');
+  var vault = FBR_getArtifactPrivateVault_();
+  var vaultFolder = vault.folder;
+  var byId = {};
+  var folders = {};
+
+  function addFolder(folder) {
+    if (folder) folders[folder.getId()] = folder;
+  }
+  function addFileId(id) {
+    id = FBR_safeText_(id);
+    if (!id || byId[id]) return;
+    try { byId[id] = DriveApp.getFileById(id); } catch (err) { console.log('FBR hardening file lookup failed ' + id + ': ' + err.message); }
   }
 
-  var fallbackId = FBR_getScriptProperty_(FBR.PROP.SOURCE_BACKUP_FOLDER_ID, FBR_SOURCE_BACKUP_DEFAULTS.FOLDER_ID);
-  return { folder: DriveApp.getFolderById(fallbackId), source: 'SOURCE_BACKUP_FALLBACK' };
+  try {
+    var parents = DriveApp.getFileById(FBR_ss_().getId()).getParents();
+    while (parents.hasNext()) addFolder(parents.next());
+  } catch (parentErr) {
+    console.log('FBR hardening spreadsheet parents failed: ' + parentErr.message);
+  }
+
+  try {
+    addFolder(DriveApp.getFolderById(FBR_getScriptProperty_(FBR.PROP.SOURCE_BACKUP_FOLDER_ID, FBR_SOURCE_BACKUP_DEFAULTS.FOLDER_ID)));
+  } catch (backupFolderErr) {
+    console.log('FBR hardening source backup folder failed: ' + backupFolderErr.message);
+  }
+
+  if (legacyReportFolderId && legacyReportFolderId !== vaultFolder.getId()) {
+    try { addFolder(DriveApp.getFolderById(legacyReportFolderId)); } catch (legacyFolderErr) { console.log('FBR hardening legacy report folder failed: ' + legacyFolderErr.message); }
+  }
+
+  Object.keys(folders).forEach(function (id) { FBR_collectArtifactFilesFromFolder_(folders[id], byId); });
+  addFileId(FBR_getScriptProperty_(FBR.PROP.ARTIFACT_MERGE_LAST_REPORT_ID, ''));
+  addFileId(FBR_getScriptProperty_(FBR.PROP.ARTIFACT_MERGE_LAST_SNAPSHOT_ID, ''));
+  addFileId(FBR_findLatestArtifactReportIdFromLogs_());
+
+  var ids = Object.keys(byId);
+  var moved = 0;
+  var alreadyPrivate = 0;
+  var failures = [];
+  ids.forEach(function (id) {
+    var file = byId[id];
+    if (!FBR_isArtifactTechnicalFileName_(file.getName())) return;
+    try {
+      if (FBR_moveArtifactFileToVault_(file, vaultFolder)) moved++; else alreadyPrivate++;
+    } catch (err) {
+      failures.push(id + ': ' + (err && err.message ? err.message : String(err)));
+    }
+  });
+  if (failures.length) throw new Error('Durcissement partiel : ' + failures.join(' | '));
+
+  var verify = FBR_verifyArtifactRegistryStorageSecurity_();
+  if (!verify.ok) throw new Error(verify.details);
+  return {
+    ok: true,
+    details: 'Trace=' + traceId + ' ; coffre=' + vaultFolder.getId() + ' ; déplacés=' + moved + ' ; déjà privés=' + alreadyPrivate + ' ; fichiers contrôlés=' + ids.length + ' ; ' + verify.details
+  };
+}
+
+function FBR_verifyArtifactRegistryStorageSecurity_() {
+  var vault = FBR_getArtifactPrivateVault_();
+  var folder = vault.folder;
+  var folderAudit;
+  try {
+    folderAudit = FBR_driveApiFileSecurity_(folder.getId());
+  } catch (folderErr) {
+    return { ok: false, details: 'Audit Drive API du coffre impossible : ' + (folderErr && folderErr.message ? folderErr.message : String(folderErr)) };
+  }
+  if (!folderAudit.ownerOnly) {
+    return { ok: false, details: 'Coffre non privé : ' + folderAudit.summary + ' ; ID=' + folder.getId() };
+  }
+
+  var files = folder.getFiles();
+  var checked = 0;
+  var nonPrivateFiles = [];
+  while (files.hasNext()) {
+    var file = files.next();
+    if (!FBR_isArtifactTechnicalFileName_(file.getName())) continue;
+    checked++;
+    try {
+      var audit = FBR_driveApiFileSecurity_(file.getId());
+      if (!audit.ownerOnly) nonPrivateFiles.push(file.getId() + ':' + audit.summary);
+    } catch (err) {
+      nonPrivateFiles.push(file.getId() + ':AUDIT_ERROR:' + (err && err.message ? err.message : String(err)));
+    }
+  }
+  if (nonPrivateFiles.length) {
+    return { ok: false, details: 'Fichiers Artifact non privés : ' + nonPrivateFiles.join(', ') };
+  }
+
+  var latestReport = FBR_getScriptProperty_(FBR.PROP.ARTIFACT_MERGE_LAST_REPORT_ID, '');
+  if (latestReport) {
+    var reportFile = DriveApp.getFileById(latestReport);
+    if (!FBR_fileHasParent_(reportFile, folder.getId())) {
+      return { ok: false, details: 'Dernier rapport hors coffre privé : ' + latestReport };
+    }
+    var reportAudit = FBR_driveApiFileSecurity_(latestReport);
+    if (!reportAudit.ownerOnly) {
+      return { ok: false, details: 'Dernier rapport non privé : ' + latestReport + ' ; ' + reportAudit.summary };
+    }
+  }
+
+  var latestSnapshot = FBR_getScriptProperty_(FBR.PROP.ARTIFACT_MERGE_LAST_SNAPSHOT_ID, '');
+  if (latestSnapshot) {
+    var snapshotFile = DriveApp.getFileById(latestSnapshot);
+    if (!FBR_fileHasParent_(snapshotFile, folder.getId())) {
+      return { ok: false, details: 'Dernier snapshot hors coffre privé : ' + latestSnapshot };
+    }
+    var snapshotAudit = FBR_driveApiFileSecurity_(latestSnapshot);
+    if (!snapshotAudit.ownerOnly) {
+      return { ok: false, details: 'Dernier snapshot non privé : ' + latestSnapshot + ' ; ' + snapshotAudit.summary };
+    }
+  }
+
+  return {
+    ok: true,
+    details: 'Coffre privé=' + folder.getId() + ' ; fichiers techniques privés=' + checked + ' ; dernier rapport=' + (latestReport || 'AUCUN') + ' ; dernier snapshot=' + (latestSnapshot || 'AUCUN')
+  };
 }
 
 function FBR_createAccessibleArtifactReportFile_(name, jsonText) {
@@ -810,17 +1210,10 @@ function FBR_createAccessibleArtifactReportFile_(name, jsonText) {
   } catch (descriptionErr) {
     console.log('FBR report description failed: ' + descriptionErr.message);
   }
-
-  if (FBR_getScriptBool_('FELIBREE_ARTIFACT_REPORT_DOMAIN_WITH_LINK', false)) {
-    try {
-      file.setSharing(DriveApp.Access.DOMAIN_WITH_LINK, DriveApp.Permission.VIEW);
-    } catch (sharingErr) {
-      console.log('FBR report domain sharing failed: ' + sharingErr.message);
-    }
-  }
+  FBR_forcePrivateArtifactFile_(file);
 
   var probe = FBR_probeArtifactReportFile_(file, jsonText);
-  if (!probe.ok) throw new Error('Rapport créé mais contrôle de lecture immédiat en échec : ' + probe.details);
+  if (!probe.ok) throw new Error('Rapport créé mais contrôle privé/lecture immédiat en échec : ' + probe.details);
   return {
     id: file.getId(),
     url: file.getUrl(),
@@ -830,7 +1223,8 @@ function FBR_createAccessibleArtifactReportFile_(name, jsonText) {
     folderUrl: 'https://drive.google.com/drive/folders/' + target.folder.getId(),
     sha256: FBR_sha256Hex_(jsonText),
     byteLength: Utilities.newBlob(jsonText, MimeType.PLAIN_TEXT).getBytes().length,
-    accessVerified: true
+    accessVerified: true,
+    privateVerified: true
   };
 }
 
@@ -839,9 +1233,11 @@ function FBR_probeArtifactReportFile_(file, expectedText) {
     var reopened = DriveApp.getFileById(file.getId());
     var text = reopened.getBlob().getDataAsString('UTF-8');
     var same = text === expectedText;
+    var audit = FBR_driveApiFileSecurity_(reopened.getId());
+    var isPrivate = audit.ownerOnly;
     return {
-      ok: same,
-      details: 'ID=' + reopened.getId() + ' ; nom=' + reopened.getName() + ' ; taille=' + reopened.getSize() + ' ; contenu_identique=' + same
+      ok: same && isPrivate,
+      details: 'ID=' + reopened.getId() + ' ; nom=' + reopened.getName() + ' ; taille=' + reopened.getSize() + ' ; contenu_identique=' + same + ' ; droits=' + audit.summary + ' ; privé=' + isPrivate
     };
   } catch (err) {
     return { ok: false, details: err && err.message ? err.message : String(err) };
@@ -853,9 +1249,11 @@ function FBR_probeArtifactReportById_(id) {
     var file = DriveApp.getFileById(id);
     var text = file.getBlob().getDataAsString('UTF-8');
     JSON.parse(text);
+    var audit = FBR_driveApiFileSecurity_(id);
+    var isPrivate = audit.ownerOnly;
     return {
-      ok: true,
-      details: 'ID=' + id + ' ; nom=' + file.getName() + ' ; taille=' + file.getSize() + ' ; URL=' + file.getUrl() + ' ; JSON lisible=OUI'
+      ok: isPrivate,
+      details: 'ID=' + id + ' ; nom=' + file.getName() + ' ; taille=' + file.getSize() + ' ; URL=' + file.getUrl() + ' ; JSON lisible=OUI ; droits=' + audit.summary + ' ; privé=' + isPrivate
     };
   } catch (err) {
     return { ok: false, details: err && err.message ? err.message : String(err) };
@@ -882,13 +1280,13 @@ function FBR_writeArtifactReportMirrorToLogs_(jsonText, meta) {
     FBR_log_({
       functionName: 'FELIBREE_ARTIFACT_REPORT_INDEX',
       mode: meta.mode + '_REPORT',
-      status: 'REPORT_ACCESSIBLE',
+      status: 'REPORT_PRIVATE_ACCESSIBLE',
       sheetName: FBR.SHEETS.RELEASES,
       rowsRead: Number(meta.sourceReleaseCount || 0) + Number(meta.sourceExportCount || 0),
       rowsChanged: meta.mode === 'APPLY' ? Number(meta.finalCount || 0) : 0,
-      message: 'Rapport Artifact Registry accessible sans dépendance au lien Drive. Trace=' + meta.traceId + ' ; parties=' + chunks.length + ' ; Drive=' + meta.reportUrl,
+      message: 'Rapport Artifact Registry accessible dans coffre Drive privé et miroir 🧾 Logs. Trace=' + meta.traceId + ' ; parties=' + chunks.length + ' ; Drive=' + meta.reportUrl,
       traceId: meta.traceId,
-      notes: 'REPORT_ID=' + meta.reportId + ' ; REPORT_FOLDER_ID=' + meta.reportFolderId + ' ; SHA256=' + meta.sha256 + ' ; BYTES=' + meta.byteLength + ' ; ' + meta.summary
+      notes: 'REPORT_ID=' + meta.reportId + ' ; REPORT_FOLDER_ID=' + meta.reportFolderId + ' ; PRIVATE=OUI ; SHA256=' + meta.sha256 + ' ; BYTES=' + meta.byteLength + ' ; ' + meta.summary
     });
 
     chunks.forEach(function (chunk, index) {
@@ -915,7 +1313,8 @@ function FBR_artifactReportReference_(report) {
   var lines = [
     'Rapport Drive: ' + report.url,
     'Rapport ID: ' + report.id,
-    'Dossier rapport: ' + report.folderUrl + ' (' + report.folderSource + ')',
+    'Coffre rapport: ' + report.folderUrl + ' (' + report.folderSource + ')',
+    'Partage Drive: ' + (report.privateVerified ? 'PRIVÉ' : 'NON VÉRIFIÉ'),
     'SHA256: ' + report.sha256,
     'Lecture immédiate Apps Script: ' + (report.accessVerified ? 'OK' : 'ÉCHEC'),
     'Miroir complet 🧾 Logs: ' + (report.mirrorOk ? (report.mirrorRows + ' ligne(s)') : ('ÉCHEC — ' + report.mirrorError))
