@@ -123,6 +123,16 @@ function FBR_clearBody_(sheetName, maxCols) {
 
 function FBR_appendRows_(sheetName, rows) {
   if (!rows || rows.length === 0) return 0;
+
+  // Compatibilité contrôlée : les anciens modules 14/15 continuent à appeler
+  // FBR.SHEETS.EXPORTS, mais aucune ligne ne doit plus être écrite dans l'onglet legacy.
+  if (sheetName === FBR.SHEETS.EXPORTS) {
+    if (typeof FBR_registerLegacyExportRows_ !== 'function') {
+      throw new Error('Artifact Registry manquant : installer 10_ArtifactRegistry.gs avant toute nouvelle sauvegarde.');
+    }
+    return FBR_registerLegacyExportRows_(rows);
+  }
+
   var sheet = FBR_sheet_(sheetName, true);
   var start = Math.max(sheet.getLastRow() + 1, FBR.DATA_START_ROW);
   sheet.getRange(start, 1, rows.length, rows[0].length).setValues(rows);
@@ -199,18 +209,6 @@ function FBR_loggedActionMessage_(result, fallbackMessage) {
   return fallbackMessage || 'Action terminée.';
 }
 
-/**
- * Exécute une action avec journal central homogène.
- *
- * Options utiles :
- * - functionName, mode, sheetName
- * - logStart (false par défaut)
- * - logSuccess (true par défaut ; false pour les fonctions qui loguent déjà leur succès)
- * - rowsRead / rowsChanged : nombre ou fonction(result, context)
- * - successStatus / successMessage / notes : valeur ou fonction(result, context)
- *
- * Toute exception produit une ligne ERROR puis est relancée.
- */
 function FBR_runLoggedAction_(options, action) {
   options = options || {};
   if (typeof action !== 'function') throw new Error('Action callback manquante.');
@@ -285,7 +283,6 @@ function FBR_runLoggedAction_(options, action) {
   }
 }
 
-
 function FBR_ensureCoreSheets_() {
   var ss = FBR_ss_();
   var existing = ss.getSheets().map(function (s) { return s.getName(); });
@@ -297,9 +294,12 @@ function FBR_ensureCoreSheets_() {
   FBR_ensureAdminSheetHeaders_(FBR.SHEETS.LOGS, '🧾 Logs — journal d\'exécution Apps Script', FBR.ADMIN_HEADERS.LOGS);
   FBR_ensureCalendarConfigSheet_();
   FBR_ensureAdminSheetHeaders_(FBR.SHEETS.CALENDAR, '📆 Calendar Sync — publication vers Google Calendar', FBR.ADMIN_HEADERS.CALENDAR);
-  FBR_ensureAdminSheetHeaders_(FBR.SHEETS.EXPORTS, '📤 Exports — packs, snapshots, livrables', FBR.ADMIN_HEADERS.EXPORTS);
+  if (typeof FBR_ensureArtifactRegistrySheet_ === 'function') {
+    FBR_ensureArtifactRegistrySheet_();
+  } else {
+    FBR_ensureAdminSheetHeaders_(FBR.SHEETS.RELEASES, '📦 Releases & Backups — registre unique des releases, sauvegardes, exports et livrables', FBR.ADMIN_HEADERS.RELEASES);
+  }
 }
-
 
 function FBR_ensureCalendarConfigSheet_() {
   var sheet = FBR_sheet_(FBR.SHEETS.CALENDAR_CONFIG, true);
@@ -324,8 +324,6 @@ function FBR_ensureCalendarConfigSheet_() {
   sheet.getRange(12, 1, 1, 6).setValues([['Email collaborateur', 'Rôle', 'Appliquer ?', 'Statut', 'Dernier sync', 'Notes']]);
   sheet.setFrozenRows(4);
 }
-
-
 
 function FBR_ensurePlanningRulesSheet_() {
   var sheet = FBR_sheet_(FBR.SHEETS.PLANNING_RULES, true);

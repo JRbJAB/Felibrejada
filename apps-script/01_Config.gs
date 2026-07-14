@@ -1,4 +1,4 @@
-var FELIBREE_SCRIPT_VERSION = 'felibree-strict-ui-automation-v0.6.6-central-log-coverage-20260713';
+var FELIBREE_SCRIPT_VERSION = 'felibree-strict-ui-automation-v0.7.4-artifact-registry-fusion-20260714';
 
 var FBR = {
   SHEETS: {
@@ -17,6 +17,9 @@ var FBR = {
     LOGS: '🧾 Logs',
     CALENDAR_CONFIG: '📆 Calendrier Comms',
     CALENDAR: '📆 Calendar Sync',
+    RELEASES: '📦 Releases & Backups',
+    // Alias legacy conservé uniquement pour intercepter les anciens writers.
+    // Cet onglet n'est plus REQUIRED et ne doit jamais être recréé.
     EXPORTS: '📤 Exports'
   },
   HEADER_ROW: 4,
@@ -42,7 +45,11 @@ var FBR = {
     GITHUB_BRANCH: 'FELIBREE_GITHUB_BRANCH',
     GITHUB_PATH_PREFIX: 'FELIBREE_GITHUB_PATH_PREFIX',
     GITHUB_COMMITTER_NAME: 'FELIBREE_GITHUB_COMMITTER_NAME',
-    GITHUB_COMMITTER_EMAIL: 'FELIBREE_GITHUB_COMMITTER_EMAIL'
+    GITHUB_COMMITTER_EMAIL: 'FELIBREE_GITHUB_COMMITTER_EMAIL',
+    ALLOW_ARTIFACT_MERGE_WRITE: 'FELIBREE_ALLOW_ARTIFACT_MERGE_WRITE',
+    ALLOW_EXPORTS_RETIREMENT: 'FELIBREE_ALLOW_EXPORTS_RETIREMENT',
+    ARTIFACT_MERGE_LAST_SNAPSHOT_ID: 'FELIBREE_ARTIFACT_MERGE_LAST_SNAPSHOT_ID',
+    ARTIFACT_MERGE_LAST_REPORT_ID: 'FELIBREE_ARTIFACT_MERGE_LAST_REPORT_ID'
   },
   MENU_OPEN_TRIGGER_HANDLER: 'FELIBREE_menuOpenInstallable',
   TRIGGER_HANDLERS: [
@@ -65,25 +72,24 @@ var FBR = {
     '🧾 Logs',
     '📆 Calendrier Comms',
     '📆 Calendar Sync',
-    '📤 Exports'
+    '📦 Releases & Backups'
   ],
   ADMIN_HEADERS: {
     CHECKS: ['Horodatage', 'Bloc', 'Niveau', 'Ligne source', 'Champ', 'Problème', 'Action corrective', 'Responsable', 'Statut', 'Notes'],
     LOGS: ['Horodatage', 'Utilisateur', 'Fonction', 'Mode', 'Statut', 'Onglet', 'Lignes lues', 'Lignes modifiées', 'Messages', 'Durée ms', 'Version script', 'Trace ID', 'Notes'],
     CALENDAR_CONFIG: ['Paramètre', 'Valeur', 'Notes'],
     CALENDAR: ['Horodatage', 'Mode', 'Date publication', 'Canal', 'Titre événement', 'Statut contenu', 'Calendar ID', 'Event ID', 'Action', 'Résultat', 'Ligne source', 'URL publiée', 'Notes'],
+    RELEASES: ['Registre ID', 'Horodatage', 'Classe', 'Objet / livrable', 'Version / Trace ID', 'Statut', 'Drive / fichier canonique', 'GitHub / commit', 'Périmètre / scripts', 'Owner', 'Résultat', 'Notes', 'Rollback / remplacé par', 'Conservation', 'Canonique ?', 'Intégrité / hash', 'Revue / purge', 'Drive ID', 'Chemin Drive', 'Clé technique'],
     EXPORTS: ['Horodatage', 'Type export', 'Période', 'Source', 'Format', 'Mode', 'Statut', 'Lien fichier', 'Responsable', 'Notes'],
     PLANNING_RULES: ['Canal', 'Type contenu', 'Jours autorisés', 'Jours interdits', 'Créneau principal', 'Créneau secours', 'Durée événement min', 'Règle stricte', 'Max / semaine', 'Délai validation avant envoi', 'Priorité', 'Source / logique', 'Notes']
   }
 };
-
 
 var FBR_CALENDAR_DEFAULTS = {
   NAME: '📆 Communication (🎉 Félibrée 2027)',
   TIME_ZONE: 'Europe/Paris',
   DESCRIPTION: 'Calendrier éditorial et opérationnel de la communication Félibrée 2027 : publications réseaux sociaux, presse, site web, chatbot, relances médias, actions de coordination et jalons de validation. Ce calendrier est réservé au pilotage interne de la communication.'
 };
-
 
 /** Constantes legacy calendrier/liens, sans création d’onglet ni Web App HEAD. */
 var FBR_ADMIN_WEB_DEFAULTS = {
@@ -112,7 +118,6 @@ var FBR_EVENT_COLOR_BY_STATUS = {
   'annule': CalendarApp.EventColor.GRAY
 };
 
-
 var FBR_PLANNING_HEADERS = {
   TARGET_TIME: 'Heure cible',
   PLANNED_DATETIME: 'Date/heure planifiée',
@@ -124,13 +129,11 @@ var FBR_PLANNING_HEADERS = {
   SLOT_SOURCE: 'Slot source'
 };
 
-
 var FBR_SOURCE_BACKUP_DEFAULTS = {
   FOLDER_ID: '1cOZszuqpv6vc0dPaud8L-anR0ewjmzTg',
   PREFIX: 'felibree_apps_script_live_source_backup',
   KEEP_LAST_N: 30
 };
-
 
 var FBR_GITHUB_DEFAULTS = {
   OWNER: 'JRbJAB',
