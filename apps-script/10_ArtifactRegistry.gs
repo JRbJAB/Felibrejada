@@ -5,7 +5,7 @@
  */
 
 var FBR_ARTIFACT = {
-  VERSION: 'v1.0.0-20260714',
+  VERSION: 'v1.0.2-20260714-ACCESSIBLE-REPORTS',
   CLASSES: ['RELEASE', 'BACKUP_SCRIPT', 'BACKUP_SHEET', 'PACK', 'LIVRABLE', 'DOCUMENTATION', 'EXPORT', 'MIRROR_GITHUB_SEUL', 'SNAPSHOT', 'ARCHIVE'],
   STATUSES: ['CANONIQUE', 'VALIDÉ_LIVE', 'PRÊT_NON_LIVE', 'PARTIEL', 'À_REVOIR', 'REMPLACÉ', 'ARCHIVÉ', 'À_PURGER', 'ERREUR'],
   CONSERVATION: ['PERMANENTE', '30_DERNIERS', 'JALON', 'LEGACY_À_REVOIR', 'PURGE_APRÈS_REVUE'],
@@ -22,6 +22,45 @@ function FELIBREE_mergeExportsIntoReleasesDryRun() {
     logStart: true
   }, function (context) {
     return FBR_mergeExportsIntoReleases_(true, context.traceId);
+  });
+}
+
+function FELIBREE_verifyLastArtifactReportAccess() {
+  return FBR_runLoggedAction_({
+    functionName: 'FELIBREE_verifyLastArtifactReportAccess',
+    mode: 'READ_ONLY_REPORT_ACCESS',
+    sheetName: FBR.SHEETS.LOGS,
+    logStart: true
+  }, function () {
+    var id = FBR_getScriptProperty_(FBR.PROP.ARTIFACT_MERGE_LAST_REPORT_ID, '') || FBR_findLatestArtifactReportIdFromLogs_();
+    if (!id) throw new Error('Aucun rapport Artifact Registry trouvé dans les propriétés ou dans 🧾 Logs.');
+    var access = FBR_probeArtifactReportById_(id);
+    if (!access.ok) throw new Error('Rapport introuvable ou illisible : ' + access.details);
+    return FBR_result_(true, 'Rapport Artifact Registry accessible', access.details);
+  });
+}
+
+function FELIBREE_republishLatestArtifactReportToLogs() {
+  return FBR_runLoggedAction_({
+    functionName: 'FELIBREE_republishLatestArtifactReportToLogs',
+    mode: 'REPORT_RECOVERY',
+    sheetName: FBR.SHEETS.LOGS,
+    logStart: true
+  }, function (context) {
+    var id = FBR_findLatestArtifactReportIdFromLogs_() || FBR_getScriptProperty_(FBR.PROP.ARTIFACT_MERGE_LAST_REPORT_ID, '');
+    if (!id) throw new Error('Aucun rapport Artifact Registry trouvé dans les propriétés ou dans 🧾 Logs.');
+    return FBR_republishArtifactReportToAccessibleLocation_(id, context.traceId);
+  });
+}
+
+function FELIBREE_restoreLegacyReleasesViewAfterDryRunDamage() {
+  return FBR_runLoggedAction_({
+    functionName: 'FELIBREE_restoreLegacyReleasesViewAfterDryRunDamage',
+    mode: 'UI_REPAIR_ONLY',
+    sheetName: FBR.SHEETS.RELEASES,
+    logStart: true
+  }, function (context) {
+    return FBR_restoreLegacyReleasesView_(context.traceId);
   });
 }
 
@@ -60,12 +99,15 @@ function FELIBREE_retireExportsApply() {
     if (!FBR_getScriptBool_(FBR.PROP.ALLOW_EXPORTS_RETIREMENT, false)) {
       throw new Error('Suppression bloquée : ajouter propriété script ' + FBR.PROP.ALLOW_EXPORTS_RETIREMENT + '=TRUE.');
     }
-    var verify = FBR_verifyArtifactRegistry_(false);
-    if (!verify.ok) throw new Error('Retraite refusée : ' + verify.details);
+    // Le registre doit être valide pendant que l'onglet legacy est encore présent.
+    var verifyBefore = FBR_verifyArtifactRegistry_(true);
+    if (!verifyBefore.ok) throw new Error('Retraite refusée : ' + verifyBefore.details);
     var legacy = FBR_sheet_(FBR.SHEETS.EXPORTS, false);
     if (!legacy) return FBR_result_(true, 'Exports déjà retiré', 'Aucun onglet legacy présent.');
     FBR_ss_().deleteSheet(legacy);
-    return FBR_result_(true, 'Exports retiré', 'Onglet legacy supprimé après gates OK.');
+    var verifyAfter = FBR_verifyArtifactRegistry_(false);
+    if (!verifyAfter.ok) throw new Error('Onglet supprimé mais contrôle final en échec : ' + verifyAfter.details);
+    return FBR_result_(true, 'Exports retiré', 'Onglet legacy supprimé après gates avant/après OK.');
   });
 }
 
@@ -83,19 +125,31 @@ function FELIBREE_restoreArtifactMergeSnapshot() {
   });
 }
 
-function FBR_ensureArtifactRegistrySheet_() {
-  var sheet = FBR_sheet_(FBR.SHEETS.RELEASES, true);
+function FBR_ensureArtifactRegistryContainer_() {
+  return FBR_sheet_(FBR.SHEETS.RELEASES, true);
+}
+
+function FBR_ensureArtifactRegistrySheet_(applyUi) {
+  var sheet = FBR_ensureArtifactRegistryContainer_();
+  // Par défaut, cette fonction est non destructive. L'UI cible ne doit être
+  // appliquée qu'après écriture du dataset normalisé et snapshot préalable.
+  if (applyUi !== true) return sheet;
   var headers = FBR.ADMIN_HEADERS.RELEASES;
   sheet.getRange(1, 1).setValue(FBR_ARTIFACT.TITLE);
   sheet.getRange(2, 1).setValue(FBR_ARTIFACT.RULE);
   sheet.getRange(4, 1, 1, headers.length).setValues([headers]);
   FBR_applyArtifactRegistryUi_(sheet);
+  return sheet;
 }
 
 function FBR_applyArtifactRegistryUi_(sheet) {
   sheet = sheet || FBR_sheet_(FBR.SHEETS.RELEASES, true);
   var maxCols = FBR.ADMIN_HEADERS.RELEASES.length;
   var lastRow = Math.max(sheet.getLastRow(), 5);
+
+  // Dimensionner avant les validations pour ne jamais viser hors grille.
+  FBR_compactArtifactGrid_(sheet, Math.max(200, lastRow + 20), maxCols);
+  var endRow = sheet.getMaxRows();
 
   sheet.getRange(1, 1, 1, maxCols)
     .setBackground('#174F4A')
@@ -130,28 +184,28 @@ function FBR_applyArtifactRegistryUi_(sheet) {
   widths.forEach(function (w, i) { sheet.setColumnWidth(i + 1, w); });
   sheet.hideColumns(18, 3);
 
-  var body = sheet.getRange(5, 1, Math.max(1, lastRow - 4), maxCols);
+  var body = sheet.getRange(5, 1, Math.max(1, endRow - 4), maxCols);
   body.setVerticalAlignment('top').setWrap(true);
-  sheet.getRange(5, 2, Math.max(1, lastRow - 4), 1).setNumberFormat('yyyy-MM-dd HH:mm:ss');
+  sheet.getRange(5, 2, Math.max(1, endRow - 4), 1).setNumberFormat('yyyy-MM-dd HH:mm:ss');
 
   if (sheet.getFilter()) sheet.getFilter().remove();
   sheet.getRange(4, 1, Math.max(2, lastRow - 3), maxCols).createFilter();
 
-  FBR_setArtifactValidations_(sheet, Math.max(lastRow + 100, 200));
-  FBR_setArtifactConditionalFormatting_(sheet, Math.max(lastRow + 100, 200));
-  FBR_compactArtifactGrid_(sheet, 200, maxCols);
+  FBR_setArtifactValidations_(sheet, endRow);
+  FBR_setArtifactConditionalFormatting_(sheet, endRow);
 }
 
 function FBR_refreshArtifactKpis_(sheet) {
   sheet.getRange('A3:T3').clearContent();
+  var sep = FBR_formulaSeparator_();
   var kpis = [
-    ['Total', '=MAX(0,COUNTA(A5:A))'],
-    ['Canoniques', '=COUNTIF(O5:O,"OUI")'],
-    ['À revoir', '=COUNTIF(F5:F,"À_REVOIR")'],
-    ['À purger', '=COUNTIF(F5:F,"À_PURGER")'],
-    ['Doublons ID', '=SUMPRODUCT((A5:A<>"")*(COUNTIF(A5:A,A5:A)>1))'],
-    ['Doublons clé', '=SUMPRODUCT((T5:T<>"")*(COUNTIF(T5:T,T5:T)>1))'],
-    ['Dernier backup script', '=IFERROR(MAX(FILTER(B5:B,C5:C="BACKUP_SCRIPT")),"")']
+    ['Total', '=MAX(0' + sep + 'COUNTA(A5:A))'],
+    ['Canoniques', '=COUNTIF(O5:O' + sep + '"OUI")'],
+    ['À revoir', '=COUNTIF(F5:F' + sep + '"À_REVOIR")'],
+    ['À purger', '=COUNTIF(F5:F' + sep + '"À_PURGER")'],
+    ['Doublons ID', '=SUMPRODUCT((A5:A<>"")*(COUNTIF(A5:A' + sep + 'A5:A)>1))'],
+    ['Doublons clé', '=SUMPRODUCT((T5:T<>"")*(COUNTIF(T5:T' + sep + 'T5:T)>1))'],
+    ['Dernier backup script', '=IFERROR(MAX(FILTER(B5:B' + sep + 'C5:C="BACKUP_SCRIPT"))' + sep + '"")']
   ];
   var col = 1;
   kpis.forEach(function (k) {
@@ -175,16 +229,17 @@ function FBR_setArtifactValidations_(sheet, endRow) {
 
 function FBR_setArtifactConditionalFormatting_(sheet, endRow) {
   var range = sheet.getRange(5, 1, endRow - 4, 20);
+  var sep = FBR_formulaSeparator_();
   var rules = [
     SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=$F5="CANONIQUE"').setBackground('#D7F3E3').setRanges([range]).build(),
     SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=$F5="VALIDÉ_LIVE"').setBackground('#E4F6EA').setRanges([range]).build(),
     SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=$F5="PRÊT_NON_LIVE"').setBackground('#E8F1FB').setRanges([range]).build(),
-    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=OR($F5="PARTIEL",$F5="À_REVOIR")').setBackground('#FFF0D5').setRanges([range]).build(),
-    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=OR($F5="REMPLACÉ",$F5="ARCHIVÉ")').setBackground('#EEF0F2').setFontColor('#64748B').setRanges([range]).build(),
-    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=OR($F5="À_PURGER",$F5="ERREUR")').setBackground('#FDE2E2').setFontColor('#991B1B').setRanges([range]).build(),
-    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=AND($A5<>"",COUNTIF($A$5:$A,$A5)>1)').setBackground('#B91C1C').setFontColor('#FFFFFF').setRanges([sheet.getRange(5, 1, endRow - 4, 1)]).build(),
-    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=AND($T5<>"",COUNTIF($T$5:$T,$T5)>1)').setBackground('#B91C1C').setFontColor('#FFFFFF').setRanges([sheet.getRange(5, 20, endRow - 4, 1)]).build(),
-    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=AND($O5="OUI",$P5="")').setBackground('#FFF0D5').setRanges([sheet.getRange(5, 16, endRow - 4, 1)]).build()
+    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=OR($F5="PARTIEL"' + sep + '$F5="À_REVOIR")').setBackground('#FFF0D5').setRanges([range]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=OR($F5="REMPLACÉ"' + sep + '$F5="ARCHIVÉ")').setBackground('#EEF0F2').setFontColor('#64748B').setRanges([range]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=OR($F5="À_PURGER"' + sep + '$F5="ERREUR")').setBackground('#FDE2E2').setFontColor('#991B1B').setRanges([range]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=AND($A5<>""' + sep + 'COUNTIF($A$5:$A' + sep + '$A5)>1)').setBackground('#B91C1C').setFontColor('#FFFFFF').setRanges([sheet.getRange(5, 1, endRow - 4, 1)]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=AND($T5<>""' + sep + 'COUNTIF($T$5:$T' + sep + '$T5)>1)').setBackground('#B91C1C').setFontColor('#FFFFFF').setRanges([sheet.getRange(5, 20, endRow - 4, 1)]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=AND($O5="OUI"' + sep + '$P5="")').setBackground('#FFF0D5').setRanges([sheet.getRange(5, 16, endRow - 4, 1)]).build()
   ];
   sheet.setConditionalFormatRules(rules);
 }
@@ -199,26 +254,32 @@ function FBR_compactArtifactGrid_(sheet, targetRows, targetCols) {
 }
 
 function FBR_mergeExportsIntoReleases_(dryRun, traceId) {
-  FBR_ensureCoreSheets_();
+  // Ne jamais appeler FBR_ensureCoreSheets_ ici : le dry-run doit laisser
+  // 📦 Releases & Backups strictement intact.
+  FBR_ensureArtifactRegistryContainer_();
   var releases = FBR_readReleaseArtifacts_();
   var legacy = FBR_readLegacyExports_();
   var plan = FBR_buildArtifactMergePlan_(releases, legacy);
   var report = FBR_writeArtifactReport_(plan, dryRun, traceId);
 
   if (dryRun) {
-    return FBR_result_(true, 'Fusion Exports → Releases — dry-run', FBR_artifactPlanSummary_(plan) + '\nRapport: ' + report.url);
+    return FBR_result_(true, 'Fusion Exports → Releases — dry-run', FBR_artifactPlanSummary_(plan) + '\n' + FBR_artifactReportReference_(report));
   }
 
+  // Snapshot impérativement AVANT le premier changement de cellule, format,
+  // validation, filtre, masquage ou dimension de grille.
   var snapshot = FBR_createArtifactSnapshot_(traceId);
   FBR_writeArtifactDataset_(plan.finalRows);
+  SpreadsheetApp.flush();
   var legacySheet = FBR_sheet_(FBR.SHEETS.EXPORTS, false);
   if (legacySheet) legacySheet.hideSheet();
   PropertiesService.getScriptProperties().setProperty(FBR.PROP.ARTIFACT_MERGE_LAST_SNAPSHOT_ID, snapshot.id);
   PropertiesService.getScriptProperties().setProperty(FBR.PROP.ARTIFACT_MERGE_LAST_REPORT_ID, report.id);
 
-  var verify = FBR_verifyArtifactRegistry_(false);
+  // L'onglet legacy est volontairement conservé et masqué après fusion.
+  var verify = FBR_verifyArtifactRegistry_(true);
   if (!verify.ok) throw new Error('Fusion écrite mais gates en échec. Utiliser rollback. ' + verify.details);
-  return FBR_result_(true, 'Fusion Exports → Releases — APPLY', FBR_artifactPlanSummary_(plan) + '\nSnapshot: ' + snapshot.url + '\nRapport: ' + report.url);
+  return FBR_result_(true, 'Fusion Exports → Releases — APPLY', FBR_artifactPlanSummary_(plan) + '\nSnapshot JSON: ' + snapshot.url + '\nCopie Sheet complète: ' + snapshot.spreadsheetCopyUrl + '\n' + FBR_artifactReportReference_(report));
 }
 
 function FBR_readReleaseArtifacts_() {
@@ -240,16 +301,48 @@ function FBR_readLegacyExports_() {
 function FBR_normalizeExistingReleaseRow_(r) {
   var row = r.slice(0, 20);
   while (row.length < 20) row.push('');
-  // Ancien schéma détecté par les en-têtes historiques : ID, Date, Version, Type...
-  if (!FBR_ARTIFACT.CLASSES.includes(FBR_safeText_(row[2]))) {
+  if (FBR_isLegacyReleaseRow_(row)) {
     var legacy = row.slice();
+    var legacyPriority = FBR_safeText_(legacy[12]);
+    var legacyRegistryVersion = FBR_safeText_(legacy[13]);
+    var legacyConservation = FBR_safeText_(legacy[16]);
+    var legacyCanonicalText = FBR_safeText_(legacy[17]);
+    var notes = FBR_safeText_(legacy[11]);
+    var preserved = [];
+    if (legacyPriority) preserved.push('Priorité legacy=' + legacyPriority);
+    if (legacyRegistryVersion) preserved.push('Version registry legacy=' + legacyRegistryVersion);
+    if (legacyConservation) preserved.push('Conservation legacy=' + legacyConservation);
+    if (legacyCanonicalText && !FBR_isReplacementText_(legacyCanonicalText)) preserved.push('État canonique legacy=' + legacyCanonicalText);
+    if (preserved.length) notes = FBR_joinUniqueText_(notes, '[Migration] ' + preserved.join(' ; '));
+
+    var rollback = FBR_safeText_(legacy[10]);
+    if (FBR_isReplacementText_(legacyCanonicalText)) rollback = FBR_joinUniqueText_(rollback, legacyCanonicalText);
+
     row = [
-      legacy[0], legacy[1], FBR_classifyArtifact_(legacy[3], legacy[5], legacy[6]), legacy[3], legacy[2],
-      FBR_normalizeArtifactStatus_(legacy[4]), legacy[5], legacy[6], legacy[7], legacy[8], legacy[9], legacy[11],
-      legacy[10] || legacy[17], legacy[16] || 'LEGACY_À_REVOIR', legacy[17] ? 'NON' : 'À DÉTERMINER',
-      legacy[18] || '', legacy[19] || 'REVUE REQUISE', legacy[14] || FBR_extractDriveId_(legacy[5]), legacy[15] || '', ''
+      legacy[0],
+      legacy[1],
+      FBR_classifyArtifact_(legacy[3], legacy[5], legacy[6]),
+      legacy[3],
+      legacy[2],
+      FBR_normalizeArtifactStatus_(legacy[4]),
+      legacy[5],
+      legacy[6],
+      legacy[7],
+      legacy[8],
+      legacy[9],
+      notes,
+      rollback,
+      FBR_normalizeConservation_(legacyConservation),
+      FBR_inferCanonical_(legacyCanonicalText, legacy[4]),
+      legacy[18] || '',
+      legacy[19] || 'REVUE REQUISE',
+      legacy[14] || FBR_extractDriveId_(legacy[5]),
+      legacy[15] || '',
+      ''
     ];
   }
+  row[13] = FBR_normalizeConservation_(row[13]);
+  row[14] = FBR_normalizeCanonical_(row[14]);
   row[19] = row[19] || FBR_buildArtifactKeyFromRow_(row);
   return row;
 }
@@ -289,7 +382,10 @@ function FBR_buildArtifactMergePlan_(existing, legacy) {
     var key = row[19] || FBR_buildArtifactKeyFromRow_(row);
     row[19] = key;
     if (!byKey[key]) byKey[key] = row;
-    else actions.push({ action: 'DUPLICATE_EXISTING', source: 'RELEASES', index: index + 5, key: key });
+    else {
+      byKey[key] = FBR_mergeArtifactRows_(byKey[key], row);
+      actions.push({ action: 'DUPLICATE_EXISTING_COLLAPSED', source: 'RELEASES', index: index + 5, key: key });
+    }
   });
 
   // Fusionne d'abord les deux lignes Drive/GitHub d'un même trace.
@@ -372,19 +468,20 @@ function FBR_repairArtifactIds_(rows, actions) {
   });
   rows.forEach(function (r) {
     var old = FBR_safeText_(r[0]);
-    if (!old || seen[old]) {
+    var oldKey = old.toUpperCase();
+    if (!old || seen[oldKey]) {
       var prefix = r[2] === 'RELEASE' ? 'REL' : (r[2].indexOf('BACKUP') === 0 ? 'BKP' : 'ART');
       max[prefix] = (max[prefix] || 0) + 1;
       r[0] = prefix + '-' + ('0000' + max[prefix]).slice(-4);
       if (old) r[11] = [r[11], 'ID legacy dupliqué remplacé : ' + old].filter(Boolean).join(' | ');
       actions.push({ action: old ? 'REPAIR_DUPLICATE_ID' : 'ASSIGN_ID', oldId: old, newId: r[0], key: r[19] });
     }
-    seen[r[0]] = true;
+    seen[FBR_safeText_(r[0]).toUpperCase()] = true;
   });
 }
 
 function FBR_registerLegacyExportRows_(rows) {
-  FBR_ensureArtifactRegistrySheet_();
+  FBR_assertArtifactRegistryMigrated_();
   var artifacts = rows.map(FBR_legacyExportRowToArtifact_);
   var count = 0;
   artifacts.forEach(function (artifact) {
@@ -395,6 +492,7 @@ function FBR_registerLegacyExportRows_(rows) {
 }
 
 function FBR_upsertArtifactByKey_(artifact) {
+  FBR_assertArtifactRegistryMigrated_();
   var sheet = FBR_sheet_(FBR.SHEETS.RELEASES, true);
   artifact = FBR_normalizeExistingReleaseRow_(artifact);
   var key = artifact[19];
@@ -413,9 +511,11 @@ function FBR_upsertArtifactByKey_(artifact) {
     }
   }
   if (!artifact[0]) artifact[0] = FBR_nextArtifactId_(artifact[2]);
-  sheet.getRange(Math.max(sheet.getLastRow() + 1, 5), 1, 1, 20).setValues([artifact]);
+  var targetRow = Math.max(sheet.getLastRow() + 1, 5);
+  if (targetRow > sheet.getMaxRows()) sheet.insertRowsAfter(sheet.getMaxRows(), targetRow - sheet.getMaxRows());
+  sheet.getRange(targetRow, 1, 1, 20).setValues([artifact]);
   FBR_refreshArtifactKpis_(sheet);
-  return { action: 'CREATE', row: sheet.getLastRow(), key: key };
+  return { action: 'CREATE', row: targetRow, key: key };
 }
 
 function FBR_nextArtifactId_(cls) {
@@ -432,15 +532,16 @@ function FBR_nextArtifactId_(cls) {
 
 function FBR_writeArtifactDataset_(rows) {
   var sheet = FBR_sheet_(FBR.SHEETS.RELEASES, true);
-  FBR_ensureArtifactRegistrySheet_();
-  var oldRows = Math.max(1, sheet.getLastRow() - 4);
-  sheet.getRange(5, 1, oldRows, 20).clearContent();
+  var requiredRows = Math.max(200, rows.length + 24);
+  FBR_compactArtifactGrid_(sheet, requiredRows, 20);
+  var clearRows = Math.max(1, sheet.getMaxRows() - 4);
+  sheet.getRange(5, 1, clearRows, 20).clearContent().clearDataValidations();
   if (rows.length) sheet.getRange(5, 1, rows.length, 20).setValues(rows);
-  FBR_applyArtifactRegistryUi_(sheet);
+  FBR_ensureArtifactRegistrySheet_(true);
 }
 
 function FBR_verifyArtifactRegistry_(allowLegacyPresent) {
-  FBR_ensureArtifactRegistrySheet_();
+  SpreadsheetApp.flush();
   var sheet = FBR_sheet_(FBR.SHEETS.RELEASES, true);
   var lastRow = sheet.getLastRow();
   var rows = lastRow >= 5 ? sheet.getRange(5, 1, lastRow - 4, 20).getValues().filter(function (r) { return FBR_safeText_(r[0]) !== ''; }) : [];
@@ -449,35 +550,167 @@ function FBR_verifyArtifactRegistry_(allowLegacyPresent) {
   var duplicateIds = [];
   var duplicateKeys = [];
   var missingKeys = [];
+  var invalidClasses = [];
+  var invalidStatuses = [];
+  var invalidConservation = [];
+  var invalidCanonical = [];
   rows.forEach(function (r, i) {
+    var rowNumber = i + 5;
     var id = FBR_safeText_(r[0]);
+    var idKey = id.toUpperCase();
     var key = FBR_safeText_(r[19]);
-    if (ids[id]) duplicateIds.push(id); else ids[id] = true;
-    if (!key) missingKeys.push(i + 5);
+    if (ids[idKey]) duplicateIds.push(id); else ids[idKey] = true;
+    if (!key) missingKeys.push(rowNumber);
     else if (keys[key]) duplicateKeys.push(key); else keys[key] = true;
+    if (FBR_ARTIFACT.CLASSES.indexOf(FBR_safeText_(r[2])) < 0) invalidClasses.push(rowNumber);
+    if (FBR_ARTIFACT.STATUSES.indexOf(FBR_safeText_(r[5])) < 0) invalidStatuses.push(rowNumber);
+    if (FBR_ARTIFACT.CONSERVATION.indexOf(FBR_safeText_(r[13])) < 0) invalidConservation.push(rowNumber);
+    if (FBR_ARTIFACT.CANONICAL.indexOf(FBR_safeText_(r[14])) < 0) invalidCanonical.push(rowNumber);
   });
   var legacy = FBR_sheet_(FBR.SHEETS.EXPORTS, false);
   var legacyIssue = !allowLegacyPresent && legacy ? ['Onglet legacy encore présent'] : [];
+  var kpiDisplays = sheet.getRange('B3:N3').getDisplayValues()[0];
+  var formulaErrors = kpiDisplays.filter(function (v) { return /^#/.test(FBR_safeText_(v)); });
   var issues = [].concat(duplicateIds.length ? ['IDs dupliqués=' + duplicateIds.length] : [])
     .concat(duplicateKeys.length ? ['Clés dupliquées=' + duplicateKeys.length] : [])
     .concat(missingKeys.length ? ['Clés manquantes=' + missingKeys.length] : [])
+    .concat(invalidClasses.length ? ['Classes invalides=' + invalidClasses.length] : [])
+    .concat(invalidStatuses.length ? ['Statuts invalides=' + invalidStatuses.length] : [])
+    .concat(invalidConservation.length ? ['Conservation invalide=' + invalidConservation.length] : [])
+    .concat(invalidCanonical.length ? ['Canonique invalide=' + invalidCanonical.length] : [])
+    .concat(formulaErrors.length ? ['KPI en erreur=' + formulaErrors.length] : [])
     .concat(legacyIssue);
-  return FBR_result_(issues.length === 0, issues.length ? 'Registry en échec' : 'Registry OK', issues.length ? issues.join(' ; ') : 'Lignes=' + rows.length + ' ; IDs et clés uniques.');
+  return FBR_result_(issues.length === 0, issues.length ? 'Registry en échec' : 'Registry OK', issues.length ? issues.join(' ; ') : 'Lignes=' + rows.length + ' ; schéma, IDs, clés et KPI valides.');
+}
+
+function FBR_restoreLegacyReleasesView_(traceId) {
+  var sheet = FBR_sheet_(FBR.SHEETS.RELEASES, true);
+  var sample = sheet.getRange(5, 1, 1, 20).getValues()[0];
+  if (!FBR_isLegacyReleaseRow_(sample)) {
+    throw new Error('Réparation UI refusée : le registre ne présente pas la signature legacy attendue en ligne 5.');
+  }
+  var snapshot = FBR_createArtifactSnapshot_(traceId);
+  PropertiesService.getScriptProperties().setProperty(FBR.PROP.ARTIFACT_MERGE_LAST_SNAPSHOT_ID, snapshot.id);
+  var legacyHeaders = [
+    'ID release', 'Date', 'Version / trace', 'Type', 'Statut', 'Drive backup / pack',
+    'GitHub commit / repo', 'Scripts concernés', 'Owner', 'Résultat', 'Rollback', 'Notes',
+    'Priorité', 'Version registry', 'Drive ID', 'Chemin Drive', 'Conservation',
+    'Remplacé par / canonique', 'Intégrité / hash', 'Revue / purge'
+  ];
+  sheet.getRange('A1:T4').clearContent();
+  sheet.getRange(1, 1).setValue('📦 Releases & Backups — versions, packs, Drive, GitHub, rollback');
+  sheet.getRange(2, 1).setValue('Source : meilleur JRbIA. Centralise les releases et preuves de sauvegarde.');
+  sheet.getRange(3, 1, 1, 4).setValues([['Dernière mise à jour', Utilities.formatDate(new Date(), FBR_CALENDAR_DEFAULTS.TIME_ZONE, 'yyyy-MM-dd'), 'Statut', 'Vue legacy restaurée après dry-run — aucune donnée métier modifiée']]);
+  sheet.getRange(4, 1, 1, 20).setValues([legacyHeaders]);
+  if (sheet.getFilter()) sheet.getFilter().remove();
+  sheet.setConditionalFormatRules([]);
+  sheet.getRange(5, 1, Math.max(1, sheet.getMaxRows() - 4), 20).clearDataValidations();
+  sheet.showColumns(18, 3);
+  sheet.setFrozenRows(4);
+  sheet.setFrozenColumns(0);
+  var widths = [490, 75, 135, 235, 90, 565, 570, 280, 70, 265, 145, 205, 70, 110, 190, 190, 190, 190, 190, 190];
+  widths.forEach(function (w, i) { sheet.setColumnWidth(i + 1, w); });
+  sheet.getRange(1, 1, 1, 20).setBackground('#174F4A').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(14);
+  sheet.getRange(4, 1, 1, 20).setBackground('#2F766F').setFontColor('#FFFFFF').setFontWeight('bold').setWrap(true);
+  return FBR_result_(true, 'Vue legacy restaurée', 'Aucune ligne métier modifiée. Snapshot JSON=' + snapshot.url + ' ; copie Sheet complète=' + snapshot.spreadsheetCopyUrl + '. Relancer ensuite le dry-run.');
+}
+
+function FBR_isArtifactRegistryMigrated_() {
+  var sheet = FBR_sheet_(FBR.SHEETS.RELEASES, false);
+  if (!sheet) return false;
+  var header = FBR_safeText_(sheet.getRange(4, 3).getValue());
+  if (header !== 'Classe') return false;
+  var sample = sheet.getLastRow() >= 5 ? sheet.getRange(5, 1, 1, 20).getValues()[0] : [];
+  return !(sample.length && FBR_isLegacyReleaseRow_(sample));
+}
+
+function FBR_assertArtifactRegistryMigrated_() {
+  if (!FBR_isArtifactRegistryMigrated_()) {
+    throw new Error('Registre non migré : écriture directe dans 📦 Releases & Backups bloquée. Les sauvegardes préalables restent autorisées et sont enregistrées temporairement dans 📤 Exports.');
+  }
+}
+
+function FBR_isLegacyReleaseRow_(row) {
+  if (!row || !row.length) return false;
+  var cls = FBR_safeText_(row[2]);
+  if (FBR_ARTIFACT.CLASSES.indexOf(cls) >= 0) return false;
+  return FBR_safeText_(row[0]) !== '' && FBR_safeText_(row[3]) !== '';
+}
+
+function FBR_formulaSeparator_() {
+  var locale = '';
+  try { locale = FBR_ss_().getSpreadsheetLocale() || ''; } catch (err) { locale = ''; }
+  return /^(fr|de|es|it|pt|nl|pl|ru|tr|cs|da|fi|sv|no|hu|ro|sk|sl)/i.test(locale) ? ';' : ',';
+}
+
+function FBR_joinUniqueText_(base, extra) {
+  base = FBR_safeText_(base);
+  extra = FBR_safeText_(extra);
+  if (!extra) return base;
+  if (!base) return extra;
+  if (base.indexOf(extra) >= 0) return base;
+  return base + ' | ' + extra;
+}
+
+function FBR_isReplacementText_(value) {
+  var s = FBR_norm_(value);
+  return /remplac|supplant|obsol|ne plus utiliser|archive|rollback/.test(s);
+}
+
+function FBR_normalizeConservation_(value) {
+  var raw = FBR_safeText_(value);
+  if (FBR_ARTIFACT.CONSERVATION.indexOf(raw) >= 0) return raw;
+  var s = FBR_norm_(raw);
+  if (/30|trente|rotation/.test(s)) return '30_DERNIERS';
+  if (/jalon/.test(s)) return 'JALON';
+  if (/purge|supprim/.test(s)) return 'PURGE_APRÈS_REVUE';
+  if (/permanent|conserver définitivement|canonique/.test(s)) return 'PERMANENTE';
+  return 'LEGACY_À_REVOIR';
+}
+
+function FBR_normalizeCanonical_(value) {
+  var raw = FBR_safeText_(value);
+  if (FBR_ARTIFACT.CANONICAL.indexOf(raw) >= 0) return raw;
+  return FBR_inferCanonical_(raw, '');
+}
+
+function FBR_inferCanonical_(canonicalText, statusText) {
+  var s = FBR_norm_([canonicalText, statusText].join(' '));
+  if (/remplac|supplant|obsol|ne plus utiliser|à purger|a purger|do not use/.test(s)) return 'NON';
+  if (/canonique|baseline stable|architecture canonique|sheet actif|source de vérité|source de verite/.test(s)) return 'OUI';
+  return 'À DÉTERMINER';
 }
 
 function FBR_createArtifactSnapshot_(traceId) {
+  var spreadsheetId = FBR_ss_().getId();
+  var stamp = Utilities.formatDate(new Date(), FBR_CALENDAR_DEFAULTS.TIME_ZONE, 'yyyyMMdd_HHmmss');
+  var folder = DriveApp.getFolderById(FBR_getScriptProperty_(FBR.PROP.SOURCE_BACKUP_FOLDER_ID, FBR_SOURCE_BACKUP_DEFAULTS.FOLDER_ID));
+  var sourceFile = DriveApp.getFileById(spreadsheetId);
+  var copyName = 'felibree_sheet_pre_artifact_change_' + stamp + '_' + traceId;
+  var spreadsheetCopy = sourceFile.makeCopy(copyName, folder);
   var payload = {
     version: FBR_ARTIFACT.VERSION,
     createdAt: new Date().toISOString(),
     traceId: traceId,
-    spreadsheetId: FBR_ss_().getId(),
+    spreadsheetId: spreadsheetId,
+    fullSpreadsheetCopy: {
+      id: spreadsheetCopy.getId(),
+      url: spreadsheetCopy.getUrl(),
+      name: copyName
+    },
     releases: FBR_snapshotSheet_(FBR.SHEETS.RELEASES),
     exports: FBR_snapshotSheet_(FBR.SHEETS.EXPORTS)
   };
-  var folder = DriveApp.getFolderById(FBR_getScriptProperty_(FBR.PROP.SOURCE_BACKUP_FOLDER_ID, FBR_SOURCE_BACKUP_DEFAULTS.FOLDER_ID));
-  var name = 'felibree_artifact_registry_premerge_snapshot_' + Utilities.formatDate(new Date(), FBR_CALENDAR_DEFAULTS.TIME_ZONE, 'yyyyMMdd_HHmmss') + '_' + traceId + '.json';
+  var name = 'felibree_artifact_registry_premerge_snapshot_' + stamp + '_' + traceId + '.json';
   var file = folder.createFile(name, JSON.stringify(payload, null, 2), MimeType.PLAIN_TEXT);
-  return { id: file.getId(), url: file.getUrl(), name: name };
+  return {
+    id: file.getId(),
+    url: file.getUrl(),
+    name: name,
+    spreadsheetCopyId: spreadsheetCopy.getId(),
+    spreadsheetCopyUrl: spreadsheetCopy.getUrl(),
+    spreadsheetCopyName: copyName
+  };
 }
 
 function FBR_snapshotSheet_(sheetName) {
@@ -510,7 +743,6 @@ function FBR_restoreSnapshotSheet_(snap) {
 }
 
 function FBR_writeArtifactReport_(plan, dryRun, traceId) {
-  var folder = DriveApp.getFolderById(FBR_getScriptProperty_(FBR.PROP.SOURCE_BACKUP_FOLDER_ID, FBR_SOURCE_BACKUP_DEFAULTS.FOLDER_ID));
   var stamp = Utilities.formatDate(new Date(), FBR_CALENDAR_DEFAULTS.TIME_ZONE, 'yyyyMMdd_HHmmss');
   var prefix = dryRun ? 'DRYRUN' : 'APPLY';
   var name = 'felibree_artifact_merge_' + prefix + '_' + stamp + '_' + traceId + '.json';
@@ -526,8 +758,215 @@ function FBR_writeArtifactReport_(plan, dryRun, traceId) {
     actions: plan.actions,
     finalRows: plan.finalRows
   };
-  var file = folder.createFile(name, JSON.stringify(payload, null, 2), MimeType.PLAIN_TEXT);
-  return { id: file.getId(), url: file.getUrl(), name: name };
+  var jsonText = JSON.stringify(payload, null, 2);
+  var created = FBR_createAccessibleArtifactReportFile_(name, jsonText);
+  var mirror = FBR_writeArtifactReportMirrorToLogs_(jsonText, {
+    mode: prefix,
+    traceId: traceId,
+    reportId: created.id,
+    reportUrl: created.url,
+    reportName: created.name,
+    reportFolderId: created.folderId,
+    sha256: created.sha256,
+    byteLength: created.byteLength,
+    sourceReleaseCount: plan.sourceReleaseCount,
+    sourceExportCount: plan.sourceExportCount,
+    finalCount: plan.finalRows.length,
+    summary: payload.summary
+  });
+  PropertiesService.getScriptProperties().setProperty(FBR.PROP.ARTIFACT_MERGE_LAST_REPORT_ID, created.id);
+  created.mirrorRows = mirror.rows;
+  created.mirrorOk = mirror.ok;
+  created.mirrorError = mirror.error || '';
+  return created;
+}
+
+function FBR_getArtifactReportFolder_() {
+  var explicitId = FBR_getScriptProperty_('FELIBREE_ARTIFACT_REPORT_FOLDER_ID', '');
+  if (explicitId) {
+    try {
+      return { folder: DriveApp.getFolderById(explicitId), source: 'SCRIPT_PROPERTY' };
+    } catch (explicitErr) {
+      console.log('FBR_getArtifactReportFolder_ explicit folder failed: ' + explicitErr.message);
+    }
+  }
+
+  try {
+    var parents = DriveApp.getFileById(FBR_ss_().getId()).getParents();
+    if (parents.hasNext()) return { folder: parents.next(), source: 'SPREADSHEET_PARENT' };
+  } catch (parentErr) {
+    console.log('FBR_getArtifactReportFolder_ spreadsheet parent failed: ' + parentErr.message);
+  }
+
+  var fallbackId = FBR_getScriptProperty_(FBR.PROP.SOURCE_BACKUP_FOLDER_ID, FBR_SOURCE_BACKUP_DEFAULTS.FOLDER_ID);
+  return { folder: DriveApp.getFolderById(fallbackId), source: 'SOURCE_BACKUP_FALLBACK' };
+}
+
+function FBR_createAccessibleArtifactReportFile_(name, jsonText) {
+  var target = FBR_getArtifactReportFolder_();
+  var file = target.folder.createFile(name, jsonText, MimeType.PLAIN_TEXT);
+  try {
+    file.setDescription('Félibrée 2027 — rapport Artifact Registry privé. Miroir complet disponible dans 🧾 Logs.');
+  } catch (descriptionErr) {
+    console.log('FBR report description failed: ' + descriptionErr.message);
+  }
+
+  if (FBR_getScriptBool_('FELIBREE_ARTIFACT_REPORT_DOMAIN_WITH_LINK', false)) {
+    try {
+      file.setSharing(DriveApp.Access.DOMAIN_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch (sharingErr) {
+      console.log('FBR report domain sharing failed: ' + sharingErr.message);
+    }
+  }
+
+  var probe = FBR_probeArtifactReportFile_(file, jsonText);
+  if (!probe.ok) throw new Error('Rapport créé mais contrôle de lecture immédiat en échec : ' + probe.details);
+  return {
+    id: file.getId(),
+    url: file.getUrl(),
+    name: name,
+    folderId: target.folder.getId(),
+    folderSource: target.source,
+    folderUrl: 'https://drive.google.com/drive/folders/' + target.folder.getId(),
+    sha256: FBR_sha256Hex_(jsonText),
+    byteLength: Utilities.newBlob(jsonText, MimeType.PLAIN_TEXT).getBytes().length,
+    accessVerified: true
+  };
+}
+
+function FBR_probeArtifactReportFile_(file, expectedText) {
+  try {
+    var reopened = DriveApp.getFileById(file.getId());
+    var text = reopened.getBlob().getDataAsString('UTF-8');
+    var same = text === expectedText;
+    return {
+      ok: same,
+      details: 'ID=' + reopened.getId() + ' ; nom=' + reopened.getName() + ' ; taille=' + reopened.getSize() + ' ; contenu_identique=' + same
+    };
+  } catch (err) {
+    return { ok: false, details: err && err.message ? err.message : String(err) };
+  }
+}
+
+function FBR_probeArtifactReportById_(id) {
+  try {
+    var file = DriveApp.getFileById(id);
+    var text = file.getBlob().getDataAsString('UTF-8');
+    JSON.parse(text);
+    return {
+      ok: true,
+      details: 'ID=' + id + ' ; nom=' + file.getName() + ' ; taille=' + file.getSize() + ' ; URL=' + file.getUrl() + ' ; JSON lisible=OUI'
+    };
+  } catch (err) {
+    return { ok: false, details: err && err.message ? err.message : String(err) };
+  }
+}
+
+function FBR_sha256Hex_(text) {
+  var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, text, Utilities.Charset.UTF_8);
+  return digest.map(function (b) {
+    var value = b < 0 ? b + 256 : b;
+    return ('0' + value.toString(16)).slice(-2);
+  }).join('');
+}
+
+function FBR_writeArtifactReportMirrorToLogs_(jsonText, meta) {
+  try {
+    var chunkSize = 30000;
+    var chunks = [];
+    for (var offset = 0; offset < jsonText.length; offset += chunkSize) {
+      chunks.push(jsonText.slice(offset, offset + chunkSize));
+    }
+    if (!chunks.length) chunks.push('{}');
+
+    FBR_log_({
+      functionName: 'FELIBREE_ARTIFACT_REPORT_INDEX',
+      mode: meta.mode + '_REPORT',
+      status: 'REPORT_ACCESSIBLE',
+      sheetName: FBR.SHEETS.RELEASES,
+      rowsRead: Number(meta.sourceReleaseCount || 0) + Number(meta.sourceExportCount || 0),
+      rowsChanged: meta.mode === 'APPLY' ? Number(meta.finalCount || 0) : 0,
+      message: 'Rapport Artifact Registry accessible sans dépendance au lien Drive. Trace=' + meta.traceId + ' ; parties=' + chunks.length + ' ; Drive=' + meta.reportUrl,
+      traceId: meta.traceId,
+      notes: 'REPORT_ID=' + meta.reportId + ' ; REPORT_FOLDER_ID=' + meta.reportFolderId + ' ; SHA256=' + meta.sha256 + ' ; BYTES=' + meta.byteLength + ' ; ' + meta.summary
+    });
+
+    chunks.forEach(function (chunk, index) {
+      FBR_log_({
+        functionName: 'FELIBREE_ARTIFACT_REPORT_CHUNK',
+        mode: meta.mode + '_REPORT',
+        status: 'PART_' + (index + 1) + '_OF_' + chunks.length,
+        sheetName: FBR.SHEETS.RELEASES,
+        rowsRead: Number(meta.sourceReleaseCount || 0) + Number(meta.sourceExportCount || 0),
+        rowsChanged: meta.mode === 'APPLY' ? Number(meta.finalCount || 0) : 0,
+        message: 'Rapport JSON miroir — Trace=' + meta.traceId + ' — partie ' + (index + 1) + '/' + chunks.length,
+        traceId: meta.traceId,
+        notes: chunk
+      });
+    });
+    return { ok: true, rows: chunks.length + 1 };
+  } catch (err) {
+    console.log('FBR_writeArtifactReportMirrorToLogs_ failed: ' + err.message);
+    return { ok: false, rows: 0, error: err && err.message ? err.message : String(err) };
+  }
+}
+
+function FBR_artifactReportReference_(report) {
+  var lines = [
+    'Rapport Drive: ' + report.url,
+    'Rapport ID: ' + report.id,
+    'Dossier rapport: ' + report.folderUrl + ' (' + report.folderSource + ')',
+    'SHA256: ' + report.sha256,
+    'Lecture immédiate Apps Script: ' + (report.accessVerified ? 'OK' : 'ÉCHEC'),
+    'Miroir complet 🧾 Logs: ' + (report.mirrorOk ? (report.mirrorRows + ' ligne(s)') : ('ÉCHEC — ' + report.mirrorError))
+  ];
+  return lines.join('\n');
+}
+
+function FBR_findLatestArtifactReportIdFromLogs_() {
+  var sheet = FBR_sheet_(FBR.SHEETS.LOGS, false);
+  if (!sheet || sheet.getLastRow() < 5) return '';
+  var values = sheet.getRange(5, 3, sheet.getLastRow() - 4, 11).getDisplayValues();
+  for (var i = values.length - 1; i >= 0; i--) {
+    var functionName = FBR_safeText_(values[i][0]);
+    var message = FBR_safeText_(values[i][6]);
+    var notes = FBR_safeText_(values[i][10]);
+    if (!/ArtifactReport|ARTIFACT_REPORT|mergeExportsIntoReleases/i.test(functionName)) continue;
+    var text = message + ' ' + notes;
+    var explicit = text.match(/REPORT_ID=([A-Za-z0-9_-]{20,})/i);
+    if (explicit) return explicit[1];
+    var url = text.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]{20,})/i);
+    if (url) return url[1];
+  }
+  return '';
+}
+
+function FBR_republishArtifactReportToAccessibleLocation_(sourceId, traceId) {
+  var source = DriveApp.getFileById(sourceId);
+  var jsonText = source.getBlob().getDataAsString('UTF-8');
+  var payload = JSON.parse(jsonText);
+  var stamp = Utilities.formatDate(new Date(), FBR_CALENDAR_DEFAULTS.TIME_ZONE, 'yyyyMMdd_HHmmss');
+  var name = 'felibree_artifact_report_REPUBLISHED_' + stamp + '_' + traceId + '.json';
+  var created = FBR_createAccessibleArtifactReportFile_(name, jsonText);
+  var mirror = FBR_writeArtifactReportMirrorToLogs_(jsonText, {
+    mode: FBR_safeText_(payload.mode) || 'REPUBLISH',
+    traceId: FBR_safeText_(payload.traceId) || traceId,
+    reportId: created.id,
+    reportUrl: created.url,
+    reportName: created.name,
+    reportFolderId: created.folderId,
+    sha256: created.sha256,
+    byteLength: created.byteLength,
+    sourceReleaseCount: Number(payload.sourceReleaseCount || 0),
+    sourceExportCount: Number(payload.sourceExportCount || 0),
+    finalCount: Number(payload.finalCount || 0),
+    summary: FBR_safeText_(payload.summary) || 'Rapport republié depuis ' + sourceId
+  });
+  PropertiesService.getScriptProperties().setProperty(FBR.PROP.ARTIFACT_MERGE_LAST_REPORT_ID, created.id);
+  created.mirrorRows = mirror.rows;
+  created.mirrorOk = mirror.ok;
+  created.mirrorError = mirror.error || '';
+  return FBR_result_(true, 'Rapport Artifact Registry republié', 'Source=' + sourceId + '\n' + FBR_artifactReportReference_(created));
 }
 
 function FBR_artifactPlanSummary_(plan) {
@@ -538,6 +977,7 @@ function FBR_artifactPlanSummary_(plan) {
     ' ; Final=' + plan.finalRows.length +
     ' ; MERGE_EXISTING=' + (counts.MERGE_EXISTING || 0) +
     ' ; CREATE_NEW=' + (counts.CREATE_NEW || 0) +
+    ' ; DUPLICATES_COLLAPSED=' + ((counts.DUPLICATE_EXISTING_COLLAPSED || 0)) +
     ' ; PURGE=' + (counts.PURGE || 0) +
     ' ; ID_REPAIRS=' + ((counts.REPAIR_DUPLICATE_ID || 0) + (counts.ASSIGN_ID || 0));
 }

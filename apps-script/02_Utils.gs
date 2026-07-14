@@ -124,9 +124,20 @@ function FBR_clearBody_(sheetName, maxCols) {
 function FBR_appendRows_(sheetName, rows) {
   if (!rows || rows.length === 0) return 0;
 
-  // Compatibilité contrôlée : les anciens modules 14/15 continuent à appeler
-  // FBR.SHEETS.EXPORTS, mais aucune ligne ne doit plus être écrite dans l'onglet legacy.
+  // Compatibilité transactionnelle pendant la migration :
+  // - AVANT la fusion APPLY, les modules 10/14/15 doivent pouvoir enregistrer les
+  //   preuves de sauvegarde dans le schéma historique 📤 Exports. Ces lignes seront
+  //   reprises par le prochain dry-run/APPLY ; aucune écriture n'est faite dans le
+  //   registre 20 colonnes tant qu'il n'est pas réellement migré.
+  // - APRÈS la fusion APPLY, le même appel est routé vers le registre unique.
   if (sheetName === FBR.SHEETS.EXPORTS) {
+    var registryMigrated = false;
+    if (typeof FBR_isArtifactRegistryMigrated_ === 'function') {
+      registryMigrated = FBR_isArtifactRegistryMigrated_();
+    }
+    if (!registryMigrated) {
+      return FBR_appendLegacyExportRowsDirect_(rows);
+    }
     if (typeof FBR_registerLegacyExportRows_ !== 'function') {
       throw new Error('Artifact Registry manquant : installer 10_ArtifactRegistry.gs avant toute nouvelle sauvegarde.');
     }
@@ -136,6 +147,21 @@ function FBR_appendRows_(sheetName, rows) {
   var sheet = FBR_sheet_(sheetName, true);
   var start = Math.max(sheet.getLastRow() + 1, FBR.DATA_START_ROW);
   sheet.getRange(start, 1, rows.length, rows[0].length).setValues(rows);
+  return rows.length;
+}
+
+
+function FBR_appendLegacyExportRowsDirect_(rows) {
+  var sheet = FBR_sheet_(FBR.SHEETS.EXPORTS, true);
+  var width = rows[0].length;
+  if (width > sheet.getMaxColumns()) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), width - sheet.getMaxColumns());
+  }
+  var start = Math.max(sheet.getLastRow() + 1, FBR.DATA_START_ROW);
+  if (start + rows.length - 1 > sheet.getMaxRows()) {
+    sheet.insertRowsAfter(sheet.getMaxRows(), start + rows.length - 1 - sheet.getMaxRows());
+  }
+  sheet.getRange(start, 1, rows.length, width).setValues(rows);
   return rows.length;
 }
 
@@ -294,10 +320,13 @@ function FBR_ensureCoreSheets_() {
   FBR_ensureAdminSheetHeaders_(FBR.SHEETS.LOGS, '🧾 Logs — journal d\'exécution Apps Script', FBR.ADMIN_HEADERS.LOGS);
   FBR_ensureCalendarConfigSheet_();
   FBR_ensureAdminSheetHeaders_(FBR.SHEETS.CALENDAR, '📆 Calendar Sync — publication vers Google Calendar', FBR.ADMIN_HEADERS.CALENDAR);
-  if (typeof FBR_ensureArtifactRegistrySheet_ === 'function') {
-    FBR_ensureArtifactRegistrySheet_();
+  // IMPORTANT : le socle ne doit jamais reformater ni remapper le registre.
+  // La préparation complète de 📦 Releases & Backups est réservée à l'APPLY
+  // explicite du module Artifact Registry, après snapshot.
+  if (typeof FBR_ensureArtifactRegistryContainer_ === 'function') {
+    FBR_ensureArtifactRegistryContainer_();
   } else {
-    FBR_ensureAdminSheetHeaders_(FBR.SHEETS.RELEASES, '📦 Releases & Backups — registre unique des releases, sauvegardes, exports et livrables', FBR.ADMIN_HEADERS.RELEASES);
+    FBR_sheet_(FBR.SHEETS.RELEASES, true);
   }
 }
 
