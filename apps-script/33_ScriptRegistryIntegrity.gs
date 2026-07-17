@@ -1,14 +1,14 @@
 /*
  * 33_ScriptRegistryIntegrity.gs
  * Registry integrity gate for Felibrejada Apps Script.
- * v0.7.3 — compares live Apps Script source vs latest Drive live backup ZIP.
+ * v0.8.0 — emoji-header compatible; compares live Apps Script source vs latest Drive live backup ZIP.
  *
  * Writes only to the Script Registry sheet when APPLY is explicitly launched.
  * No public publication, no business-sheet injection, no secret export.
  */
 
 var FBR_SCRIPT_REGISTRY_GATE = {
-  VERSION: 'felibree-script-registry-integrity-gate-v0.7.3-20260710',
+  VERSION: 'felibree-script-registry-integrity-gate-v0.8.0-20260716-EMOJI-HEADERS',
   HEADER_ROW: 4,
   FIRST_DATA_ROW: 5,
   FILE_COL: 1,
@@ -31,8 +31,77 @@ var FBR_SCRIPT_REGISTRY_GATE = {
   COLOR_OK: '#d9ead3',
   COLOR_WARN: '#fff2cc',
   COLOR_BAD: '#f4cccc',
+
   COLOR_NA: '#eeeeee'
 };
+
+var FBR_SCRIPT_REGISTRY_DISPLAY_HEADERS = {
+  'Fichier script': '📄 Fichier script',
+  'Fonction publique / interne': '⚙️ Fonction publique / interne',
+  'Type': '🏷️ Type',
+  'Menu / appel': '🧭 Menu / appel',
+  'Domaine': '🗂️ Domaine',
+  'Statut': '🚦 Statut',
+  'Criticité': '🔥 Criticité',
+  'Write action': '✍️ Write action',
+  'Dépendances': '🔗 Dépendances',
+  'Scope requis': '🔐 Scope requis',
+  'Dernier backup': '💾 Dernier backup',
+  'GitHub path': '🐙 GitHub path',
+  'Owner': '👤 Owner',
+  'Action suivante': '➡️ Action suivante',
+  'Notes': '📝 Notes',
+  'Version': '🔖 Version',
+  'Trace': '🧬 Trace',
+  'Famille / rôle': '🧩 Famille / rôle',
+  'Live present': '🟢 Live present',
+  'Live SHA256': '🔐 Live SHA256',
+  'Backup SHA256': '🛡️ Backup SHA256',
+  'Drift status': '📐 Drift status',
+  'Registry alert': '🚨 Registry alert',
+  'Last checked': '🕒 Last checked',
+  'Latest backup': '💾 Latest backup',
+  'Missing in live': '❓ Missing in live',
+  'Missing in backup': '❔ Missing in backup',
+  'Diff summary': '🧾 Diff summary',
+  'Présent menu': '🧭 Présent menu',
+  'Présent sidebar': '📌 Présent sidebar',
+  'Wrapper public': '🌐 Wrapper public',
+  'Mode MAJ': '🔄 Mode MAJ',
+  'Vue cockpit': '🎛️ Vue cockpit',
+  'Audit UI source': '🔍 Audit UI source',
+  'Décision UI': '✅ Décision UI',
+  'Risque UI': '⚠️ Risque UI',
+  'Remplacé par / cible': '♻️ Remplacé par / cible'
+};
+
+function FBR_registryDisplayHeader_(canonical) {
+  return FBR_SCRIPT_REGISTRY_DISPLAY_HEADERS[canonical] || canonical;
+}
+
+function FBR_registryCanonicalHeader_(display) {
+  display = FBR_registryNormalizeText_(display);
+  if (!display) return '';
+  var keys = Object.keys(FBR_SCRIPT_REGISTRY_DISPLAY_HEADERS);
+  for (var i = 0; i < keys.length; i++) {
+    var canonical = keys[i];
+    if (display === canonical || display === FBR_SCRIPT_REGISTRY_DISPLAY_HEADERS[canonical]) return canonical;
+  }
+  return display;
+}
+
+function FBR_registryLivePresentLabel_(present) {
+  return present ? '✅ YES' : '❌ NO';
+}
+
+function FBR_registryNormalizeLivePresent_(value) {
+  var text = FBR_registryNormalizeText_(value).toUpperCase();
+  if (text.indexOf('YES') >= 0 || text.indexOf('OUI') >= 0) return '✅ YES';
+  if (text.indexOf('NO') >= 0 || text.indexOf('NON') >= 0) return '❌ NO';
+  if (text.indexOf('N/A') >= 0) return '⚪ N/A';
+  return text ? '🟡 À recalculer' : '';
+}
+
 
 function FBR_registrySheetName_() {
   return String.fromCodePoint(0x1F9E9) + ' Script Registry';
@@ -137,8 +206,10 @@ function FBR_registryHeaderMap_(sheet) {
   var headers = sheet.getRange(FBR_SCRIPT_REGISTRY_GATE.HEADER_ROW, 1, 1, lastCol).getDisplayValues()[0];
   var map = {};
   for (var i = 0; i < headers.length; i++) {
-    var h = FBR_registryNormalizeText_(headers[i]);
-    if (h) map[h] = i + 1;
+    var display = FBR_registryNormalizeText_(headers[i]);
+    var canonical = FBR_registryCanonicalHeader_(display);
+    if (display) map[display] = i + 1;
+    if (canonical) map[canonical] = i + 1;
   }
   return map;
 }
@@ -149,9 +220,12 @@ function FBR_registryEnsureColumns_(sheet) {
     var h = FBR_SCRIPT_REGISTRY_GATE.HEADERS[i];
     if (!map[h]) {
       var col = sheet.getLastColumn() + 1;
-      sheet.getRange(FBR_SCRIPT_REGISTRY_GATE.HEADER_ROW, col).setValue(h);
+      sheet.getRange(FBR_SCRIPT_REGISTRY_GATE.HEADER_ROW, col).setValue(FBR_registryDisplayHeader_(h));
       try {
-        sheet.getRange(FBR_SCRIPT_REGISTRY_GATE.HEADER_ROW, Math.max(1, col - 1)).copyTo(sheet.getRange(FBR_SCRIPT_REGISTRY_GATE.HEADER_ROW, col), { formatOnly: true });
+        sheet.getRange(FBR_SCRIPT_REGISTRY_GATE.HEADER_ROW, Math.max(1, col - 1)).copyTo(
+          sheet.getRange(FBR_SCRIPT_REGISTRY_GATE.HEADER_ROW, col),
+          { formatOnly: true }
+        );
       } catch (err) {
         // Formatting copy is optional.
       }
@@ -164,6 +238,8 @@ function FBR_registryEnsureColumns_(sheet) {
 function FBR_registryExpectedLive_(status, fileName, liveMap) {
   status = FBR_registryNormalizeText_(status).toLowerCase();
   if (status.indexOf('actif') >= 0) return true;
+  if (status.indexOf('auto-détect') >= 0 || status.indexOf('auto-detect') >= 0) return true;
+  if (status.indexOf('appliqué') >= 0 || status.indexOf('applique') >= 0) return true;
   if (liveMap[fileName]) return true;
   return false;
 }
@@ -230,7 +306,7 @@ function FBR_registryRowStatus_(fileName, rowStatus, criticality, liveMap, backu
   return {
     fileName: fileName,
     comparable: true,
-    livePresent: live ? 'YES' : 'NO',
+    livePresent: FBR_registryLivePresentLabel_(!!live),
     liveSha: live ? live.sha256 : '',
     backupSha: backup ? backup.sha256 : '',
     drift: drift,
@@ -243,7 +319,7 @@ function FBR_registryRowStatus_(fileName, rowStatus, criticality, liveMap, backu
 }
 
 function FBR_registryWriteResultToRow_(sheet, rowNumber, colMap, result, backup, checkedAt) {
-  sheet.getRange(rowNumber, colMap['Live present']).setValue(result.livePresent);
+  sheet.getRange(rowNumber, colMap['Live present']).setValue(FBR_registryNormalizeLivePresent_(result.livePresent));
   sheet.getRange(rowNumber, colMap['Live SHA256']).setValue(result.liveSha);
   sheet.getRange(rowNumber, colMap['Backup SHA256']).setValue(result.backupSha);
   sheet.getRange(rowNumber, colMap['Drift status']).setValue(result.drift);
@@ -273,15 +349,15 @@ function FBR_registryAppendMissingLiveRows_(sheet, colMap, liveMap, backupMap, r
     row[2] = 'Live Apps Script';
     row[3] = 'Registry gate';
     row[4] = 'Script Registry';
-    row[5] = 'Auto-discovered live';
-    row[6] = 'P1';
+    row[5] = '🔵 Auto-détecté live';
+    row[6] = '🟠 P1 haute';
     row[7] = 'Non direct';
     row[10] = backup.name;
     row[11] = 'apps-script/' + name;
     row[12] = 'JRbIA';
     row[13] = 'Classer dans registry';
     row[14] = 'Fichier live absent du registry avant gate; vérifier criticité/statut.';
-    row[15] = 'v0.7.3';
+    row[15] = 'v0.8.0';
     row[16] = traceId;
 
     var live = liveMap[name];
@@ -289,7 +365,7 @@ function FBR_registryAppendMissingLiveRows_(sheet, colMap, liveMap, backupMap, r
     var alertLevel = bkp ? (live.sha256 === bkp.sha256 ? 'OK' : 'WARN') : 'WARN';
     var alert = FBR_registryAlertText_(alertLevel, bkp ? (live.sha256 === bkp.sha256 ? 'OK AUTO' : 'DRIFT AUTO') : 'BACKUP MANQUANT AUTO');
 
-    row[colMap['Live present'] - 1] = 'YES';
+    row[colMap['Live present'] - 1] = FBR_registryLivePresentLabel_(true);
     row[colMap['Live SHA256'] - 1] = live.sha256;
     row[colMap['Backup SHA256'] - 1] = bkp ? bkp.sha256 : '';
     row[colMap['Drift status'] - 1] = 'LIVE_NOT_IN_REGISTRY';
@@ -301,6 +377,9 @@ function FBR_registryAppendMissingLiveRows_(sheet, colMap, liveMap, backupMap, r
     row[colMap['Diff summary'] - 1] = 'Fichier live non listé dans Script Registry avant vérification.';
 
     var rowNumber = Math.max(sheet.getLastRow() + 1, FBR_SCRIPT_REGISTRY_GATE.FIRST_DATA_ROW);
+    if (rowNumber > sheet.getMaxRows()) {
+      sheet.insertRowsAfter(sheet.getMaxRows(), rowNumber - sheet.getMaxRows());
+    }
     sheet.getRange(rowNumber, 1, 1, lastCol).setValues([row]);
     sheet.getRange(rowNumber, colMap['Registry alert']).setBackground(FBR_registryAlertColor_(alert));
     appended++;
